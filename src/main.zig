@@ -46,7 +46,7 @@ fn activate(_: *c.GtkApplication, _: c.gpointer) void {
 }
 
 pub fn main() u8 {
-    gapp = Application.create("es.alphatechnolog.harakara", .default);
+    gapp = Application.init("es.alphatechnolog.harakara", .default);
     defer gapp.?.toGObject().unref();
 
     if (gapp) |app| {

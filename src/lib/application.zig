@@ -9,16 +9,10 @@ const Self = @This();
 
 ptr: *c.GtkApplication,
 
-pub fn create(id: [*c]const u8, flags: enums.GApplicationFlags) Self {
+pub fn init(id: [*c]const u8, flags: enums.GApplicationFlags) Self {
     const flag: c_uint = @intFromEnum(flags);
     const app = c.gtk_application_new(id, flag) orelse @panic("invalid app!");
-    return Self.init(app);
-}
-
-pub fn init(instance: *c.GtkApplication) Self {
-    return Self{
-        .ptr = instance,
-    };
+    return Self{ .ptr = app };
 }
 
 pub inline fn toRaw(self: Self) *c.GtkApplication {
