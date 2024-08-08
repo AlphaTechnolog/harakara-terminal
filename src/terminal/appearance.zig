@@ -30,7 +30,6 @@ fn setupFont(self: Self, terminal: *VteTerminal) !void {
 
     defer self.allocator.free(font_format);
 
-    // terminal.setFontFromString(@as([:0]const u8, @ptrCast(font_format)));
     terminal.setFontFromString(@ptrCast(font_format));
 }
 
