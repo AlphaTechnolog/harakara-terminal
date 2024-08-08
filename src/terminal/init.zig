@@ -5,7 +5,7 @@ const Window = @import("../lib/window.zig");
 const Application = @import("../lib/application.zig");
 const VteTerminal = @import("../lib/vte.zig");
 
-const Colorscheme = @import("./colorscheme.zig");
+const AppearanceController = @import("./appearance.zig");
 
 const mem = std.mem;
 const posix = std.posix;
@@ -15,14 +15,14 @@ const Self = @This();
 allocator: mem.Allocator,
 window: Window.ApplicationWindow,
 terminal: VteTerminal,
-colorscheme: Colorscheme,
+appearance: AppearanceController,
 
 pub fn init(allocator: mem.Allocator, app: *Application) !*Self {
     var instance = try allocator.create(Self);
     instance.allocator = allocator;
     instance.window = Window.ApplicationWindow.init(app.*);
     instance.terminal = VteTerminal.init();
-    instance.colorscheme = Colorscheme.init(allocator, instance);
+    instance.appearance = try AppearanceController.init(allocator, instance);
     return instance;
 }
 
@@ -48,7 +48,10 @@ pub fn setup(self: *Self) void {
     self.window.asWindow().setTitle("Harakara");
     self.window.asContainer().add(self.terminal.asWidget());
 
-    self.colorscheme.setup() catch @panic("Unable to load colorscheme");
+    self.appearance.setup(&self.terminal) catch {
+        @panic("Unable to load appearance settings");
+    };
+
     self.setupTerminal();
 
     self.terminal.connectChildExited(
@@ -58,6 +61,7 @@ pub fn setup(self: *Self) void {
 }
 
 pub fn deinit(self: *Self) void {
+    self.appearance.deinit();
     self.terminal.asWidget().destroy();
     self.window.asWindow().close();
     self.window.asWidget().destroy();

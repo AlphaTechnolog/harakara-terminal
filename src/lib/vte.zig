@@ -1,6 +1,9 @@
 const c = @import("./c.zig");
+
+const utils = @import("./utils.zig");
 const enums = @import("./enums.zig");
 const Widget = @import("./widget.zig");
+const PangoFontDescription = @import("./pango_font_description.zig");
 
 const Self = @This();
 
@@ -10,6 +13,10 @@ pub fn init() Self {
     return Self{
         .ptr = @as(*c.VteTerminal, @ptrCast(c.vte_terminal_new())),
     };
+}
+
+pub inline fn toRaw(self: Self) *c.VteTerminal {
+    return self.ptr;
 }
 
 pub fn spawnAsync(
@@ -24,7 +31,7 @@ pub fn spawnAsync(
     cancellable: ?*c.GCancellable,
 ) void {
     c.vte_terminal_spawn_async(
-        self.ptr,
+        self.toRaw(),
         @intFromEnum(flags),
         if (wkgdir) |d| d.ptr else null,
         @as([*c][*c]c.gchar, @constCast(@ptrCast(&[2][*c]c.gchar{
@@ -44,7 +51,7 @@ pub fn spawnAsync(
 }
 
 pub inline fn asWidget(self: Self) Widget {
-    return Widget.init(@as(*c.GtkWidget, @ptrCast(self.ptr)));
+    return Widget.init(@as(*c.GtkWidget, @ptrCast(self.toRaw())));
 }
 
 pub inline fn connect(
@@ -69,5 +76,22 @@ pub fn connectChildExited(
         "child_exited",
         callback,
         data,
+    );
+}
+
+pub fn setFont(self: Self, font: PangoFontDescription) void {
+    c.vte_terminal_set_font(self.toRaw(), font.toRaw());
+}
+
+pub fn setFontFromString(self: Self, font: [:0]const u8) void {
+    const value = PangoFontDescription.fromString(font);
+    defer value.free();
+    self.setFont(value);
+}
+
+pub fn setBoldIsBright(self: Self, value: bool) void {
+    c.vte_terminal_set_bold_is_bright(
+        self.toRaw(),
+        utils.boolToCInt(value),
     );
 }
