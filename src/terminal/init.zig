@@ -5,6 +5,8 @@ const Window = @import("../lib/window.zig");
 const Application = @import("../lib/application.zig");
 const VteTerminal = @import("../lib/vte.zig");
 
+const Colorscheme = @import("./colorscheme.zig");
+
 const mem = std.mem;
 const posix = std.posix;
 
@@ -13,12 +15,14 @@ const Self = @This();
 allocator: mem.Allocator,
 window: Window.ApplicationWindow,
 terminal: VteTerminal,
+colorscheme: Colorscheme,
 
 pub fn init(allocator: mem.Allocator, app: *Application) !*Self {
     var instance = try allocator.create(Self);
     instance.allocator = allocator;
     instance.window = Window.ApplicationWindow.init(app.*);
     instance.terminal = VteTerminal.init();
+    instance.colorscheme = Colorscheme.init(allocator, instance);
     return instance;
 }
 
@@ -43,6 +47,8 @@ fn onChildExited(_: *c.VteTerminal, _: c.gint, data: c.gpointer) void {
 pub fn setup(self: *Self) void {
     self.window.asWindow().setTitle("Harakara");
     self.window.asContainer().add(self.terminal.asWidget());
+
+    self.colorscheme.setup() catch @panic("Unable to load colorscheme");
     self.setupTerminal();
 
     self.terminal.connectChildExited(
