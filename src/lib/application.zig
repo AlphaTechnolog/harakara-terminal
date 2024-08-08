@@ -32,11 +32,10 @@ pub inline fn toGApplication(self: Self) GApplication {
 pub fn connect(
     self: Self,
     detailed_signal: [*c]const u8,
-    callback: ?*const fn (*c.GtkApplication, ?*anyopaque) void,
+    callback: c.GCallback,
     data: c.gpointer,
 ) c.gulong {
     return utils.signalConnect(
-        *c.GtkApplication,
         self.toRaw(),
         detailed_signal,
         callback,

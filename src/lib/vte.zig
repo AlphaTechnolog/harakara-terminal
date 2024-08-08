@@ -47,13 +47,25 @@ pub inline fn asWidget(self: Self) Widget {
     return Widget.init(@as(*c.GtkWidget, @ptrCast(self.ptr)));
 }
 
-pub fn connectChildExited(
+pub inline fn connect(
     self: Self,
-    callback: ?*const fn (*c.VteTerminal, ?*anyopaque) void,
+    signal: [:0]const u8,
+    callback: c.GCallback,
     data: ?c.gpointer,
 ) void {
     self.asWidget().connect(
-        *c.VteTerminal,
+        signal,
+        callback,
+        data,
+    );
+}
+
+pub fn connectChildExited(
+    self: Self,
+    callback: c.GCallback,
+    data: ?c.gpointer,
+) void {
+    self.connect(
         "child_exited",
         callback,
         data,

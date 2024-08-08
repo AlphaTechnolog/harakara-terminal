@@ -13,13 +13,11 @@ pub fn init(widget: *c.GtkWidget) Self {
 
 pub fn connect(
     self: Self,
-    instance_type: type,
     sig: [:0]const u8,
-    callback: ?*const fn (instance_type, ?*anyopaque) void,
+    callback: c.GCallback,
     data: ?c.gpointer,
 ) void {
     _ = utils.signalConnect(
-        instance_type,
         self.ptr,
         sig.ptr,
         callback,

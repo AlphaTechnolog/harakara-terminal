@@ -5,10 +5,9 @@ pub inline fn boolToCInt(boolean: bool) c_int {
 }
 
 pub fn signalConnect(
-    instance_type: type,
     instance: c.gpointer,
     detailed_signal: [*c]const c.gchar,
-    c_handler: ?*const fn (instance_type, ?*anyopaque) void,
+    c_handler: c.GCallback,
     data: ?c.gpointer,
 ) c.gulong {
     var zero: u32 = 0;
@@ -17,7 +16,7 @@ pub fn signalConnect(
     return c.g_signal_connect_data(
         instance,
         detailed_signal,
-        @as(c.GCallback, @constCast(@alignCast(@ptrCast(c_handler)))),
+        c_handler,
         data orelse null,
         null,
         flags.*,
