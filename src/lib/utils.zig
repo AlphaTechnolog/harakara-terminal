@@ -4,6 +4,10 @@ pub inline fn boolToCInt(boolean: bool) c_int {
     return @as(c_int, if (boolean) 1 else 0);
 }
 
+pub inline fn gboolToBool(boolean: c.gboolean) bool {
+    return boolean == 1;
+}
+
 pub fn signalConnect(
     instance: c.gpointer,
     detailed_signal: [*c]const c.gchar,

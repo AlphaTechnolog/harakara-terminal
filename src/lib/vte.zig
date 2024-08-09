@@ -1,9 +1,10 @@
 const c = @import("./c.zig");
-
 const utils = @import("./utils.zig");
 const enums = @import("./enums.zig");
 const Widget = @import("./widget.zig");
 const PangoFontDescription = @import("./pango_font_description.zig");
+const GdkRGBA = @import("./gdk_rgba.zig");
+const Config = @import("../terminal/config.zig");
 
 const Self = @This();
 
@@ -93,5 +94,106 @@ pub fn setBoldIsBright(self: Self, value: bool) void {
     c.vte_terminal_set_bold_is_bright(
         self.toRaw(),
         utils.boolToCInt(value),
+    );
+}
+
+pub const TerminalColorPalette = struct {
+    normal: RegularColors,
+    bright: RegularColors,
+
+    const RegularColors = struct {
+        black: ?[]u8,
+        blue: ?[]u8,
+        cyan: ?[]u8,
+        green: ?[]u8,
+        magenta: ?[]u8,
+        red: ?[]u8,
+        white: ?[]u8,
+        yellow: ?[]u8,
+    };
+
+    // creates a new terminal color palette from a given color config
+    pub fn fromConfig(config: *Config.Parser.Result) @This() {
+        const config_value = config.*;
+
+        return @This(){
+            .normal = .{
+                .black = config_value.colors.normal.black,
+                .red = config_value.colors.normal.red,
+                .green = config_value.colors.normal.green,
+                .yellow = config_value.colors.normal.yellow,
+                .blue = config_value.colors.normal.blue,
+                .magenta = config_value.colors.normal.magenta,
+                .cyan = config_value.colors.normal.cyan,
+                .white = config_value.colors.normal.white,
+            },
+            .bright = .{
+                .black = config_value.colors.bright.black,
+                .red = config_value.colors.bright.red,
+                .green = config_value.colors.bright.green,
+                .yellow = config_value.colors.bright.yellow,
+                .blue = config_value.colors.bright.blue,
+                .magenta = config_value.colors.bright.magenta,
+                .cyan = config_value.colors.bright.cyan,
+                .white = config_value.colors.bright.white,
+            },
+        };
+    }
+
+    // converts a `TerminalColorPalette` into a vte terminal palette
+    pub inline fn toVteFormat(self: TerminalColorPalette) ![*c]const c.GdkRGBA {
+        var normal_black = try GdkRGBA.fromFormat(@ptrCast(self.normal.black orelse "#181818"));
+        var normal_red = try GdkRGBA.fromFormat(@ptrCast(self.normal.red orelse "#ab4642"));
+        var normal_green = try GdkRGBA.fromFormat(@ptrCast(self.normal.green orelse "#a1b56c"));
+        var normal_yellow = try GdkRGBA.fromFormat(@ptrCast(self.normal.yellow orelse "#f7ca88"));
+        var normal_blue = try GdkRGBA.fromFormat(@ptrCast(self.normal.blue orelse "#7cafc2"));
+        var normal_magenta = try GdkRGBA.fromFormat(@ptrCast(self.normal.magenta orelse "#ba8baf"));
+        var normal_cyan = try GdkRGBA.fromFormat(@ptrCast(self.normal.cyan orelse "#86c1b9"));
+        var normal_white = try GdkRGBA.fromFormat(@ptrCast(self.normal.white orelse "#d8d8d8"));
+
+        var bright_black = try GdkRGBA.fromFormat(@ptrCast(self.bright.black orelse "#242424"));
+        var bright_red = try GdkRGBA.fromFormat(@ptrCast(self.bright.red orelse "#ab4642"));
+        var bright_green = try GdkRGBA.fromFormat(@ptrCast(self.bright.green orelse "#a1b56c"));
+        var bright_yellow = try GdkRGBA.fromFormat(@ptrCast(self.bright.yellow orelse "#f7ca88"));
+        var bright_blue = try GdkRGBA.fromFormat(@ptrCast(self.bright.blue orelse "#7cafc2"));
+        var bright_magenta = try GdkRGBA.fromFormat(@ptrCast(self.bright.magenta orelse "#ba8baf"));
+        var bright_cyan = try GdkRGBA.fromFormat(@ptrCast(self.bright.cyan orelse "#86c1b9"));
+        var bright_white = try GdkRGBA.fromFormat(@ptrCast(self.bright.white orelse "#d8d8d8"));
+
+        const palette = [_]c.GdkRGBA{
+            normal_black.toRaw(),
+            normal_red.toRaw(),
+            normal_green.toRaw(),
+            normal_yellow.toRaw(),
+            normal_blue.toRaw(),
+            normal_magenta.toRaw(),
+            normal_cyan.toRaw(),
+            normal_white.toRaw(),
+            bright_black.toRaw(),
+            bright_red.toRaw(),
+            bright_green.toRaw(),
+            bright_yellow.toRaw(),
+            bright_blue.toRaw(),
+            bright_magenta.toRaw(),
+            bright_cyan.toRaw(),
+            bright_white.toRaw(),
+        };
+
+        return @as([*c]const c.GdkRGBA, @ptrCast(@alignCast(&palette)));
+    }
+};
+
+pub fn setColors(
+    self: Self,
+    fg_color: *GdkRGBA,
+    bg_color: *GdkRGBA,
+    palette: TerminalColorPalette,
+) !void {
+    c.vte_terminal_set_colors(
+        self.toRaw(),
+        &fg_color.toRaw(),
+        &bg_color.toRaw(),
+        try palette.toVteFormat(),
+        16,
     );
 }

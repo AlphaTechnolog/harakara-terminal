@@ -19,6 +19,17 @@ pub const Parser = struct {
     contents: []u8,
     result: ?*Result,
 
+    const ColorsResult = struct {
+        black: ?[]u8,
+        blue: ?[]u8,
+        cyan: ?[]u8,
+        green: ?[]u8,
+        magenta: ?[]u8,
+        red: ?[]u8,
+        white: ?[]u8,
+        yellow: ?[]u8,
+    };
+
     pub const Result = struct {
         allocator: mem.Allocator,
 
@@ -27,10 +38,44 @@ pub const Parser = struct {
             size: i64,
         },
 
+        colors: struct {
+            background: ?[]u8,
+            foreground: ?[]u8,
+            normal: ColorsResult,
+            bright: ColorsResult,
+        },
+
         pub fn init(allocator: mem.Allocator) !*Result {
             var instance = try allocator.create(Result);
+
             instance.allocator = allocator;
             instance.font = .{ .family = null, .size = 0 };
+
+            instance.colors = .{
+                .background = null,
+                .foreground = null,
+                .normal = .{
+                    .black = null,
+                    .blue = null,
+                    .cyan = null,
+                    .green = null,
+                    .magenta = null,
+                    .red = null,
+                    .white = null,
+                    .yellow = null,
+                },
+                .bright = .{
+                    .black = null,
+                    .blue = null,
+                    .cyan = null,
+                    .green = null,
+                    .magenta = null,
+                    .red = null,
+                    .white = null,
+                    .yellow = null,
+                },
+            };
+
             return instance;
         }
 
@@ -51,6 +96,8 @@ pub const Parser = struct {
         };
     }
 
+    // TODO: Instead of using that panic like assert, we should make
+    // an assert that returns an error so `handleError` can display it
     fn parseFont(self: *Parser, table: *toml.Table) !void {
         if (table.keys.get("font")) |font| {
             assert(font == .Table);
@@ -67,6 +114,99 @@ pub const Parser = struct {
             if (font.Table.keys.get("size")) |size| {
                 assert(size == .Integer);
                 self.result.?.font.size = size.Integer;
+            }
+        }
+    }
+
+    inline fn dupString(
+        self: *Parser,
+        into: *?[]u8,
+        value_ref: *const []const u8,
+    ) !void {
+        const allocator = self.allocator;
+        into.* = try allocator.dupe(u8, value_ref.*);
+    }
+
+    fn parseTermColors(
+        self: *Parser,
+        table: *const toml.Value,
+        colors: *ColorsResult,
+    ) !void {
+        assert(table.* == .Table);
+
+        if (table.*.Table.keys.get("black")) |black| {
+            assert(black == .String);
+            try self.dupString(&colors.*.black, &black.String);
+        }
+
+        if (table.*.Table.keys.get("blue")) |blue| {
+            assert(blue == .String);
+            try self.dupString(&colors.*.blue, &blue.String);
+        }
+
+        if (table.*.Table.keys.get("cyan")) |cyan| {
+            assert(cyan == .String);
+            try self.dupString(&colors.*.cyan, &cyan.String);
+        }
+
+        if (table.*.Table.keys.get("green")) |green| {
+            assert(green == .String);
+            try self.dupString(&colors.*.green, &green.String);
+        }
+
+        if (table.*.Table.keys.get("magenta")) |magenta| {
+            assert(magenta == .String);
+            try self.dupString(&colors.*.magenta, &magenta.String);
+        }
+
+        if (table.*.Table.keys.get("red")) |red| {
+            assert(red == .String);
+            try self.dupString(&colors.*.red, &red.String);
+        }
+
+        if (table.*.Table.keys.get("white")) |white| {
+            assert(white == .String);
+            try self.dupString(&colors.*.white, &white.String);
+        }
+
+        if (table.*.Table.keys.get("yellow")) |yellow| {
+            assert(yellow == .String);
+            try self.dupString(&colors.*.yellow, &yellow.String);
+        }
+    }
+
+    fn parseColors(self: *Parser, table: *toml.Table) !void {
+        if (table.keys.get("colors")) |colors| {
+            assert(colors == .Table);
+
+            if (colors.Table.keys.get("background")) |background| {
+                assert(background == .String);
+                self.result.?.colors.background = try self.allocator.dupe(
+                    u8,
+                    background.String,
+                );
+            }
+
+            if (colors.Table.keys.get("foreground")) |foreground| {
+                assert(foreground == .String);
+                self.result.?.colors.foreground = try self.allocator.dupe(
+                    u8,
+                    foreground.String,
+                );
+            }
+
+            if (colors.Table.keys.get("normal")) |normal| {
+                try self.parseTermColors(
+                    &normal,
+                    &self.result.?.colors.normal,
+                );
+            }
+
+            if (colors.Table.keys.get("bright")) |bright| {
+                try self.parseTermColors(
+                    &bright,
+                    &self.result.?.colors.bright,
+                );
             }
         }
     }
@@ -93,6 +233,7 @@ pub const Parser = struct {
         defer table.deinit();
 
         self.parseFont(table) catch |err| self.handleError(err);
+        self.parseColors(table) catch |err| self.handleError(err);
 
         return self.result orelse @panic("result was not initialised");
     }
@@ -132,6 +273,8 @@ fn createConfigFiles(self: Self, dirname_path: []u8) ![]u8 {
     const contents = buf[0..size];
 
     if (eql(u8, contents, "")) {
+        const stderr = std.io.getStdErr().writer();
+        try stderr.print("[INFO] Writing default config into ~/.config/harakara/config.toml!\n", .{});
         const new_content = @embedFile("../resources/config.toml");
         try config_file.writeAll(new_content);
         return try self.allocator.dupe(u8, new_content);
