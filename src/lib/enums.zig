@@ -2,7 +2,7 @@ const c = @import("./c.zig");
 
 /// Application initialisation enum
 pub const GApplicationFlags = enum(c_uint) {
-    default = c.G_APPLICATION_DEFAULT_FLAGS,
+    default = c.G_APPLICATION_FLAGS_NONE,
     is_service = c.G_APPLICATION_IS_SERVICE,
     is_launcher = c.G_APPLICATION_IS_LAUNCHER,
     handles_command_line = c.G_APPLICATION_HANDLES_COMMAND_LINE,
