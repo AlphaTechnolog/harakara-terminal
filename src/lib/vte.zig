@@ -10,16 +10,22 @@ const Self = @This();
 
 ptr: *c.VteTerminal,
 
+/// Initialiases a new instance of a vte empty terminal widget.
 pub fn init() Self {
     return Self{
         .ptr = @as(*c.VteTerminal, @ptrCast(c.vte_terminal_new())),
     };
 }
 
+/// Converts this `VteTerminal` instance into a `*c.VteTerminal`
 pub inline fn toRaw(self: Self) *c.VteTerminal {
     return self.ptr;
 }
 
+/// A convenience function that wraps creating the Pty and spawning the child process on it.
+///
+/// Like spawn_with_fds_async, except that this function does not allow passing
+/// file descriptors to the child process.
 pub fn spawnAsync(
     self: Self,
     flags: enums.PtyFlags,
@@ -51,10 +57,17 @@ pub fn spawnAsync(
     );
 }
 
+/// Performs the type casting from a `VteTerminal` into a `Widget` which holds
+/// a pointer for the `*c.GtkWidget`.
 pub inline fn asWidget(self: Self) Widget {
     return Widget.init(@as(*c.GtkWidget, @ptrCast(self.toRaw())));
 }
 
+/// Connects the terminal instance to a given signal using a callback
+///
+/// see: `utils.castGCallback` for passing your callback
+/// see: `utils.castFromGPointer` to receive your data from a gpointer
+/// see: `utils.castGPointer` to pass your data as a gpointer
 pub inline fn connect(
     self: Self,
     signal: [:0]const u8,
@@ -68,6 +81,7 @@ pub inline fn connect(
     );
 }
 
+/// Calls `self.connect` to the `'child-exited'` signal.
 pub fn connectChildExited(
     self: Self,
     callback: c.GCallback,
@@ -80,16 +94,20 @@ pub fn connectChildExited(
     );
 }
 
+/// Sets a given `PangoFontDescription` object as the font of the terminal
 pub fn setFont(self: Self, font: PangoFontDescription) void {
     c.vte_terminal_set_font(self.toRaw(), font.toRaw());
 }
 
+/// Convenience function that calls `PangoFontDescription` in `font` and then
+/// sets the font of the terminal to the created font object.
 pub fn setFontFromString(self: Self, font: [:0]const u8) void {
     const value = PangoFontDescription.fromString(font);
     defer value.free();
     self.setFont(value);
 }
 
+/// Defines if for the terminal bold is bright aswell. Can enhance some colors.
 pub fn setBoldIsBright(self: Self, value: bool) void {
     c.vte_terminal_set_bold_is_bright(
         self.toRaw(),
@@ -97,10 +115,13 @@ pub fn setBoldIsBright(self: Self, value: bool) void {
     );
 }
 
+/// Structure which holds a more human readable color palette representation of
+/// the terminal itself.
 pub const TerminalColorPalette = struct {
     normal: RegularColors,
     bright: RegularColors,
 
+    /// Commonly used regular colors like black, blue, red, etc.
     const RegularColors = struct {
         black: ?[]u8,
         blue: ?[]u8,
@@ -112,7 +133,7 @@ pub const TerminalColorPalette = struct {
         yellow: ?[]u8,
     };
 
-    // creates a new terminal color palette from a given color config
+    /// Creates a new terminal color palette from a given color config.
     pub fn fromConfig(config: *Config.Parser.Result) @This() {
         const config_value = config.*;
 
@@ -140,7 +161,7 @@ pub const TerminalColorPalette = struct {
         };
     }
 
-    // converts a `TerminalColorPalette` into a vte terminal palette
+    /// Converts a `TerminalColorPalette` into a vte terminal palette format.
     pub inline fn toVteFormat(self: TerminalColorPalette) ![*c]const c.GdkRGBA {
         var normal_black = try GdkRGBA.fromFormat(@ptrCast(self.normal.black orelse "#181818"));
         var normal_red = try GdkRGBA.fromFormat(@ptrCast(self.normal.red orelse "#ab4642"));
@@ -183,6 +204,8 @@ pub const TerminalColorPalette = struct {
     }
 };
 
+/// Given a fg_color, bg_color and a `TerminalColorPalette`, this function sets the
+/// terminal colorscheme to the desired ones.
 pub fn setColors(
     self: Self,
     fg_color: *GdkRGBA,
@@ -198,6 +221,7 @@ pub fn setColors(
     );
 }
 
+/// Places the selected text in the terminal in the SELECTION_CLIPBOARD selection in the form specified by format.
 pub fn copyClipboardFormat(self: Self, format: enums.Format) void {
     c.vte_terminal_copy_clipboard_format(
         self.toRaw(),
@@ -205,6 +229,9 @@ pub fn copyClipboardFormat(self: Self, format: enums.Format) void {
     );
 }
 
+/// Sends the contents of the SELECTION_PRIMARY selection to the terminal's child.
+///
+/// The terminal will call also paste the SELECTION_PRIMARY selection when the user clicks with the the second mouse button.
 pub fn pastePrimary(self: Self) void {
     c.vte_terminal_paste_primary(self.toRaw());
 }
