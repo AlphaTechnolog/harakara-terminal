@@ -4,6 +4,8 @@ const c = @import("../lib/c.zig");
 const Window = @import("../lib/window.zig");
 const Application = @import("../lib/application.zig");
 const VteTerminal = @import("../lib/vte.zig");
+const utils = @import("../lib/utils.zig");
+const types = @import("../lib/types.zig");
 
 const AppearanceController = @import("./appearance.zig");
 
@@ -40,8 +42,33 @@ fn setupTerminal(self: Self) void {
 }
 
 fn onChildExited(_: *c.VteTerminal, _: c.gint, data: c.gpointer) void {
-    var self = @as(*Self, @ptrCast(@alignCast(data)));
+    var self = utils.castFromGPointer(Self, data);
     self.deinit();
+}
+
+fn onKeyPress(
+    _: *c.GtkWidget,
+    arg_event: *c.GdkEventKey,
+    data: c.gpointer,
+) c.gboolean {
+    const self = utils.castFromGPointer(Self, data);
+    const event = types.intoGdkEventKey(arg_event);
+
+    const has_control = event.*.state & @as(c.guint, c.GDK_CONTROL_MASK) != 0;
+    const has_c = event.keyval == @as(c.guint, c.GDK_KEY_c);
+    const has_v = event.keyval == @as(c.guint, c.GDK_KEY_v);
+
+    if (has_control and has_c) {
+        self.terminal.copyClipboardFormat(.text);
+        return utils.boolToCInt(true);
+    }
+
+    if (has_control and has_v) {
+        self.terminal.pastePrimary();
+        return utils.boolToCInt(true);
+    }
+
+    return utils.boolToCInt(false);
 }
 
 pub fn setup(self: *Self) void {
@@ -54,9 +81,16 @@ pub fn setup(self: *Self) void {
 
     self.setupTerminal();
 
+    // handles terminal resources cleanups.
     self.terminal.connectChildExited(
-        @as(c.GCallback, @constCast(@ptrCast(@alignCast(&Self.onChildExited)))),
-        @as(c.gpointer, @constCast(@ptrCast(self))),
+        utils.castGCallback(Self.onChildExited),
+        utils.castGPointer(self),
+    );
+
+    // handles keybindings.
+    self.window.asWindow().connectKeyPress(
+        utils.castGCallback(Self.onKeyPress),
+        utils.castGPointer(self),
     );
 }
 

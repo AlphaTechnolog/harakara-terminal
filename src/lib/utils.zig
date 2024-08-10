@@ -26,3 +26,18 @@ pub fn signalConnect(
         flags.*,
     );
 }
+
+pub inline fn castGCallback(callback: anytype) c.GCallback {
+    return @constCast(@ptrCast(@alignCast(&callback)));
+}
+
+pub inline fn castGPointer(element: anytype) c.gpointer {
+    return @constCast(@ptrCast(element));
+}
+
+pub inline fn castFromGPointer(
+    comptime T: type,
+    element: c.gpointer,
+) *T {
+    return @as(*T, @ptrCast(@alignCast(element)));
+}

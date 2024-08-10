@@ -50,6 +50,31 @@ pub const Window = struct {
         c.gtk_window_set_transient_for(self.toRaw(), parent.toRaw());
     }
 
+    pub inline fn connect(
+        self: Self,
+        detailed_signal: [:0]const u8,
+        callback: c.GCallback,
+        data: ?c.gpointer,
+    ) void {
+        self.asWidget().connect(
+            detailed_signal,
+            callback,
+            data,
+        );
+    }
+
+    pub fn connectKeyPress(
+        self: Self,
+        callback: c.GCallback,
+        data: ?c.gpointer,
+    ) void {
+        self.connect(
+            "key-press-event",
+            callback,
+            data,
+        );
+    }
+
     // TODO: Prolly need to check for Dialog aswell.
     pub fn isInstance(gtype: u64) bool {
         return (gtype == c.gtk_window_get_type() or ApplicationWindow.isInstance(gtype));

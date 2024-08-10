@@ -36,3 +36,10 @@ pub const SpawnFlags = enum(c_uint) {
     search_path_from_envp = c.G_SPAWN_SEARCH_PATH_FROM_ENVP,
     cloexec_pipes = c.G_SPAWN_CLOEXEC_PIPES,
 };
+
+/// An enumeration type that can be used to specify the format the selection should be copied to the clipboard in.
+/// see: https://valadoc.org/vte-2.91/Vte.Format.html
+pub const Format = enum(c_uint) {
+    text = c.VTE_FORMAT_TEXT,
+    html = c.VTE_FORMAT_HTML,
+};

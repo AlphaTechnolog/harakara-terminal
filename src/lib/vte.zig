@@ -197,3 +197,14 @@ pub fn setColors(
         16,
     );
 }
+
+pub fn copyClipboardFormat(self: Self, format: enums.Format) void {
+    c.vte_terminal_copy_clipboard_format(
+        self.toRaw(),
+        @intFromEnum(format),
+    );
+}
+
+pub fn pastePrimary(self: Self) void {
+    c.vte_terminal_paste_primary(self.toRaw());
+}
