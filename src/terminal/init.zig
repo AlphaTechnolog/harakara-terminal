@@ -58,6 +58,13 @@ fn onKeyPress(
     const has_c = event.keyval == @as(c.guint, c.GDK_KEY_c);
     const has_v = event.keyval == @as(c.guint, c.GDK_KEY_v);
 
+    // TODO: For some reason if we wanna use ctrl + shift + c
+    // and ctrl + shift + v, when we do something like:
+    // const has_shift = event.*.state & @as(c.guint, c.GDK_SHIFT_MASK) != 0;
+    // and then check for all of three has_control and has_shift and has_c
+    // it fails to retrieve value for has_c and always keeps it as false
+    // prolly help is gonna be needed here and further investigation aswell.
+
     if (has_control and has_c) {
         self.terminal.copyClipboardFormat(.text);
         return utils.boolToCInt(true);
