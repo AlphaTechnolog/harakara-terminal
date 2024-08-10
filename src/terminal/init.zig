@@ -21,6 +21,7 @@ appearance: AppearanceController,
 
 pub fn init(allocator: mem.Allocator, app: *Application) !*Self {
     var instance = try allocator.create(Self);
+
     instance.allocator = allocator;
     instance.window = Window.ApplicationWindow.init(app.*);
     instance.terminal = VteTerminal.init();
@@ -56,26 +57,24 @@ fn onKeyPress(
     arg_event: *c.GdkEventKey,
     data: c.gpointer,
 ) c.gboolean {
-    const self = utils.castFromGPointer(Self, data);
+    var self = utils.castFromGPointer(Self, data);
     const event = types.intoGdkEventKey(arg_event);
 
-    const has_control = event.*.state & @as(c.guint, c.GDK_CONTROL_MASK) != 0;
-    const has_c = event.keyval == @as(c.guint, c.GDK_KEY_c);
-    const has_v = event.keyval == @as(c.guint, c.GDK_KEY_v);
+    const control_mask: c.guint = c.GDK_CONTROL_MASK;
+    const shift_mask: c.guint = c.GDK_CONTROL_MASK;
 
-    // TODO: For some reason if we wanna use ctrl + shift + c
-    // and ctrl + shift + v, when we do something like:
-    // const has_shift = event.*.state & @as(c.guint, c.GDK_SHIFT_MASK) != 0;
-    // and then check for all of three has_control and has_shift and has_c
-    // it fails to retrieve value for has_c and always keeps it as false
-    // prolly help is gonna be needed here and further investigation aswell.
+    const state = event.*.state;
 
-    if (has_control and has_c) {
+    const has_modifiers = (state & control_mask != 0) and (state & shift_mask != 0);
+    const has_c = (event.*.keyval == c.GDK_KEY_C);
+    const has_v = (event.*.keyval == c.GDK_KEY_V);
+
+    if (has_modifiers and has_c) {
         self.terminal.copyClipboardFormat(.text);
         return utils.boolToCInt(true);
     }
 
-    if (has_control and has_v) {
+    if (has_modifiers and has_v) {
         self.terminal.pastePrimary();
         return utils.boolToCInt(true);
     }
