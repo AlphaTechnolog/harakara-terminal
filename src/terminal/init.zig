@@ -52,11 +52,7 @@ fn onChildExited(_: *c.VteTerminal, _: c.gint, data: c.gpointer) void {
     self.deinit();
 }
 
-fn onKeyPress(
-    _: *c.GtkWidget,
-    arg_event: *c.GdkEventKey,
-    data: c.gpointer,
-) c.gboolean {
+fn onKeyPress(_: *c.GtkWidget, arg_event: *c.GdkEventKey, data: c.gpointer) c.gboolean {
     var self = utils.castFromGPointer(Self, data);
     const event = types.intoGdkEventKey(arg_event);
 
