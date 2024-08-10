@@ -24,7 +24,12 @@ pub fn init(allocator: mem.Allocator, app: *Application) !*Self {
     instance.allocator = allocator;
     instance.window = Window.ApplicationWindow.init(app.*);
     instance.terminal = VteTerminal.init();
-    instance.appearance = try AppearanceController.init(allocator, instance);
+
+    instance.appearance = try AppearanceController.init(
+        allocator,
+        &instance.terminal,
+    );
+
     return instance;
 }
 
@@ -82,7 +87,7 @@ pub fn setup(self: *Self) void {
     self.window.asWindow().setTitle("Harakara");
     self.window.asContainer().add(self.terminal.asWidget());
 
-    self.appearance.setup(&self.terminal) catch {
+    self.appearance.setup() catch {
         @panic("Unable to load appearance settings");
     };
 
