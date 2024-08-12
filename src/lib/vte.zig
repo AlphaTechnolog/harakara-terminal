@@ -1,3 +1,4 @@
+const std = @import("std");
 const c = @import("./c.zig");
 const utils = @import("./utils.zig");
 const enums = @import("./enums.zig");
@@ -234,4 +235,20 @@ pub fn copyClipboardFormat(self: Self, format: enums.Format) void {
 /// The terminal will call also paste the SELECTION_PRIMARY selection when the user clicks with the the second mouse button.
 pub fn pastePrimary(self: Self) void {
     c.vte_terminal_paste_primary(self.toRaw());
+}
+
+/// Gets the currently selected text in the format specified by format.
+pub fn getTextSelected(self: Self, format: enums.Format) [:0]const u8 {
+    return std.mem.span(c.vte_terminal_get_text_selected(
+        self.toRaw(),
+        @intFromEnum(format),
+    ));
+}
+
+/// Sends text to the terminal's child as if retrived from the
+/// clipboard, this differs from feed_child in that it may
+/// process text before passing it to the
+/// child (e.g. apply bracketed mode)
+pub fn pasteText(self: Self, text: [:0]const u8) void {
+    c.vte_terminal_paste_text(self.toRaw(), text.ptr);
 }

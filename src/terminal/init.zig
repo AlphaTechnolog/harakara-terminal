@@ -4,6 +4,7 @@ const c = @import("../lib/c.zig");
 const Window = @import("../lib/window.zig");
 const Application = @import("../lib/application.zig");
 const VteTerminal = @import("../lib/vte.zig");
+const Clipboard = @import("../lib/clipboard.zig");
 const utils = @import("../lib/utils.zig");
 const types = @import("../lib/types.zig");
 
@@ -18,6 +19,7 @@ allocator: mem.Allocator,
 window: Window.ApplicationWindow,
 terminal: VteTerminal,
 appearance: AppearanceController,
+clipboard: Clipboard,
 
 pub fn init(allocator: mem.Allocator, app: *Application) !*Self {
     var instance = try allocator.create(Self);
@@ -25,6 +27,7 @@ pub fn init(allocator: mem.Allocator, app: *Application) !*Self {
     instance.allocator = allocator;
     instance.window = Window.ApplicationWindow.init(app.*);
     instance.terminal = VteTerminal.init();
+    instance.clipboard = Clipboard.init(instance.allocator);
 
     instance.appearance = try AppearanceController.init(
         allocator,
@@ -52,6 +55,21 @@ fn onChildExited(_: *c.VteTerminal, _: c.gint, data: c.gpointer) void {
     self.deinit();
 }
 
+fn handleCopy(self: Self) void {
+    const text: []const u8 = @ptrCast(self.terminal.getTextSelected(.text));
+    self.clipboard.copyText(text);
+}
+
+fn handlePaste(self: Self) void {
+    const clip_contents = self.clipboard.retrieve();
+
+    if (clip_contents) |contents| {
+        self.terminal.pasteText(
+            @as([:0]const u8, @ptrCast(contents)),
+        );
+    }
+}
+
 fn onKeyPress(_: *c.GtkWidget, arg_event: *c.GdkEventKey, data: c.gpointer) c.gboolean {
     var self = utils.castFromGPointer(Self, data);
     const event = types.intoGdkEventKey(arg_event);
@@ -66,12 +84,12 @@ fn onKeyPress(_: *c.GtkWidget, arg_event: *c.GdkEventKey, data: c.gpointer) c.gb
     const has_v = (event.*.keyval == c.GDK_KEY_V);
 
     if (has_modifiers and has_c) {
-        self.terminal.copyClipboardFormat(.text);
+        self.handleCopy();
         return utils.boolToCInt(true);
     }
 
     if (has_modifiers and has_v) {
-        self.terminal.pastePrimary();
+        self.handlePaste();
         return utils.boolToCInt(true);
     }
 
