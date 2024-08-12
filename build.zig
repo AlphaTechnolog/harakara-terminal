@@ -25,6 +25,13 @@ fn pkgConfig(b: *std.Build, exe: *std.Build.Step.Compile) !void {
     var it = std.mem.tokenize(u8, result.stdout, " ");
 
     while (it.next()) |parameter| {
+        const trimmed_parameter = std.mem.trim(u8, parameter, "\n");
+
+        // prevents the current flag of being a single \n and have no content.
+        if (std.mem.eql(u8, trimmed_parameter, "")) {
+            continue;
+        }
+
         var value = parameter[2..];
 
         if (std.mem.endsWith(u8, value, "\n")) {

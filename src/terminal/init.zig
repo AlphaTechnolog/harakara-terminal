@@ -55,21 +55,6 @@ fn onChildExited(_: *c.VteTerminal, _: c.gint, data: c.gpointer) void {
     self.deinit();
 }
 
-fn handleCopy(self: Self) void {
-    const text: []const u8 = @ptrCast(self.terminal.getTextSelected(.text));
-    self.clipboard.copyText(text);
-}
-
-fn handlePaste(self: Self) void {
-    const clip_contents = self.clipboard.retrieve();
-
-    if (clip_contents) |contents| {
-        self.terminal.pasteText(
-            @as([:0]const u8, @ptrCast(contents)),
-        );
-    }
-}
-
 fn onKeyPress(_: *c.GtkWidget, arg_event: *c.GdkEventKey, data: c.gpointer) c.gboolean {
     var self = utils.castFromGPointer(Self, data);
     const event = types.intoGdkEventKey(arg_event);
@@ -84,12 +69,16 @@ fn onKeyPress(_: *c.GtkWidget, arg_event: *c.GdkEventKey, data: c.gpointer) c.gb
     const has_v = (event.*.keyval == c.GDK_KEY_V);
 
     if (has_modifiers and has_c) {
-        self.handleCopy();
+        const text: []const u8 = @ptrCast(self.terminal.getTextSelected(.text));
+        self.clipboard.copyText(text);
         return utils.boolToCInt(true);
     }
 
     if (has_modifiers and has_v) {
-        self.handlePaste();
+        if (self.clipboard.retrieve()) |contents| {
+            self.terminal.pasteText(@ptrCast(contents));
+        }
+
         return utils.boolToCInt(true);
     }
 
