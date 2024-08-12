@@ -13,15 +13,18 @@ allocator: mem.Allocator,
 
 const Self = @This();
 
+/// Creates a new clipboard manager instance.
 pub fn init(allocator: mem.Allocator) Self {
     return Self{ .allocator = allocator };
 }
 
+/// Checks if the system is running under a wayland display or a x11 one.
 inline fn isWaylandDisplay() bool {
     const wayland_display = posix.getenv("WAYLAND_DISPLAY");
     return wayland_display != null;
 }
 
+/// Runs an external command using process.Child ignoring its stdout & stderr.
 fn runExternalCommand(
     self: Self,
     command: []const u8,
@@ -43,6 +46,7 @@ fn runExternalCommand(
     }
 }
 
+// Copies the given `text` in the system clipboard (wayland impl).
 fn copyTextWayland(self: Self, text: []const u8) !void {
     const command = fmt.allocPrint(self.allocator, "wl-copy '{s}'", .{
         text,
@@ -53,6 +57,7 @@ fn copyTextWayland(self: Self, text: []const u8) !void {
     try self.runExternalCommand(command);
 }
 
+/// Copies the given `text` in the system clipboard (x11 impl).
 fn copyTextX11(self: Self, text: []const u8) !void {
     const command = fmt.allocPrint(self.allocator, "echo '{s}' | xclip -sel c", .{
         text,
@@ -63,6 +68,7 @@ fn copyTextX11(self: Self, text: []const u8) !void {
     try self.runExternalCommand(command);
 }
 
+/// Copies the given `text` in the system clipboard.
 pub fn copyText(self: Self, text: []const u8) void {
     const is_wayland_display = isWaylandDisplay();
 
@@ -73,6 +79,7 @@ pub fn copyText(self: Self, text: []const u8) void {
     }
 }
 
+/// Returns the system clipboard content (wayland impl).
 fn retrieveWayland(self: Self) !?[]const u8 {
     const argv = [_][]const u8{ "bash", "-c", "wl-paste 2>/dev/null" };
 
@@ -96,6 +103,7 @@ fn retrieveWayland(self: Self) !?[]const u8 {
     return output;
 }
 
+/// Returns the system clipboard contents (x11 impl).
 fn retrieveX11(self: Self) !?[]const u8 {
     const argv = [_][]const u8{ "bash", "-c", "xclip -o 2>/dev/null" };
 
@@ -119,6 +127,7 @@ fn retrieveX11(self: Self) !?[]const u8 {
     return output;
 }
 
+/// Retrieves the system clipboard contents.
 pub fn retrieve(self: Self) ?[]const u8 {
     const is_wayland_display = isWaylandDisplay();
 
