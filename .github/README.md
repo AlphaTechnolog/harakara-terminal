@@ -2,6 +2,8 @@
 
 A simple terminal built in zig using gtk and the VTE library.
 
+![banner.png](./assets/banner.png)
+
 ## What's this?
 
 So as already stated, this is just a simple terminal written in zig using
