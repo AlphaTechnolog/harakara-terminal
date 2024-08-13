@@ -34,7 +34,7 @@ pub fn init(allocator: mem.Allocator, app: *Application) !*Self {
     instance.window = Window.ApplicationWindow.init(app.*);
     instance.terminal = VteTerminal.init();
     instance.main_overlay = Overlay.init();
-    instance.clipboard = Clipboard.init(instance.allocator);
+    instance.clipboard = Clipboard.init(c.gdk_display_get_default());
 
     instance.status_text = Label.init("12px");
 
@@ -72,8 +72,21 @@ fn onChildExited(_: *c.VteTerminal, _: c.gint, data: c.gpointer) void {
     self.deinit();
 }
 
+fn handleClipboardRequest(
+    _: *c.GtkClipboard,
+    arg_text: [*c]const c.gchar,
+    user_data: c.gpointer,
+) void {
+    const self = utils.castFromGPointer(Self, user_data);
+
+    if (mem.len(arg_text) > 0) {
+        const text: [:0]const u8 = mem.span(arg_text);
+        self.terminal.pasteText(text);
+    }
+}
+
 fn handleCopyPaste(
-    self: Self,
+    self: *Self,
     opts: struct {
         has_modifiers: bool,
         has_c: bool,
@@ -82,14 +95,16 @@ fn handleCopyPaste(
 ) bool {
     if (opts.has_modifiers and opts.has_c) {
         const text: []const u8 = @ptrCast(self.terminal.getTextSelected(.text));
-        self.clipboard.copyText(text);
+        self.clipboard.setText(text);
         return true;
     }
 
     if (opts.has_modifiers and opts.has_v) {
-        if (self.clipboard.retrieve()) |contents| {
-            self.terminal.pasteText(@ptrCast(contents));
-        }
+        self.clipboard.requestText(
+            &Self.handleClipboardRequest,
+            utils.castGPointer(self),
+        );
+
         return true;
     }
 
