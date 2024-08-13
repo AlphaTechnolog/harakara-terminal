@@ -22,12 +22,12 @@ pub inline fn asWidget(self: Self) Widget {
     return Widget.init(@as(*c.GtkWidget, @ptrCast(self.toRaw())));
 }
 
-pub fn setText(self: Self, str: [:0]const u8) void {
+pub fn setText(self: Self, str: []const u8) void {
     c.gtk_label_set_text(self.toRaw(), str.ptr);
 }
 
 pub fn getText(self: Self) []const u8 {
-    return std.mem.span(@as([:0]const u8, @ptrCast(
+    return std.mem.span(
         c.gtk_label_get_text(self.toRaw()),
-    )));
+    );
 }

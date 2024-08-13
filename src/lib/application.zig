@@ -47,8 +47,8 @@ pub fn connect(
     detailed_signal: [*c]const u8,
     callback: c.GCallback,
     data: c.gpointer,
-) c.gulong {
-    return utils.signalConnect(
+) void {
+    _ = utils.signalConnect(
         self.toRaw(),
         detailed_signal,
         callback,
