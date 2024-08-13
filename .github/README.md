@@ -51,7 +51,7 @@ can look there and make your modifications, like the terminal colorscheme and th
 
 - Use ctrl and + / ctrl and - to zoom in and zoom out the terminal
 - Use ctrl and 0 to reset terminal zoom
-- Use ctrl + c and ctrl + p to copy/paste content in the terminal.
+- Use ctrl + shift + c and ctrl + shift + v to copy/paste content in the terminal.
 
 ## Thanks
 
