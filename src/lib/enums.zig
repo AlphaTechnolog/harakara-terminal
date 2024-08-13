@@ -67,3 +67,18 @@ pub const GtkOrientation = enum(c_uint) {
     horizontal = c.GTK_ORIENTATION_HORIZONTAL,
     vertical = c.GTK_ORIENTATION_VERTICAL,
 };
+
+/// An enumerated type which can be used to indicate what should the terminal draw at
+/// the cursor position.
+pub const CursorShape = enum(c_uint) {
+    block = c.VTE_CURSOR_SHAPE_BLOCK,
+    ibeam = c.VTE_CURSOR_SHAPE_IBEAM,
+    underline = c.VTE_CURSOR_SHAPE_UNDERLINE,
+};
+
+/// An enumerated type which can be used to indicate the cursor blink mode for the terminal.
+pub const CursorBlinkMode = enum(c_uint) {
+    off = c.VTE_CURSOR_BLINK_OFF,
+    on = c.VTE_CURSOR_BLINK_ON,
+    system = c.VTE_CURSOR_BLINK_SYSTEM,
+};

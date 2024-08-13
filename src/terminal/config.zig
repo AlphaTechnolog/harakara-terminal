@@ -7,7 +7,6 @@ const debug = std.debug;
 const posix = std.posix;
 const ArrayList = std.ArrayList;
 
-const assert = debug.assert;
 const eql = mem.eql;
 
 const Self = @This();
@@ -38,6 +37,11 @@ pub const Parser = struct {
             size: i64,
         },
 
+        cursor: struct {
+            shape: ?[]u8,
+            blinking: bool,
+        },
+
         colors: struct {
             background: ?[]u8,
             foreground: ?[]u8,
@@ -50,6 +54,7 @@ pub const Parser = struct {
 
             instance.allocator = allocator;
             instance.font = .{ .family = null, .size = 0 };
+            instance.cursor = .{ .shape = null, .blinking = true };
 
             instance.colors = .{
                 .background = null,
@@ -96,14 +101,23 @@ pub const Parser = struct {
         };
     }
 
-    // TODO: Instead of using that panic like assert, we should make
-    // an assert that returns an error so `handleError` can display it
+    const ParsingError = error{
+        InvalidSchema,
+        InvalidCursor,
+    };
+
+    fn assert(cond: bool) ParsingError!void {
+        if (!cond) {
+            return error.InvalidSchema;
+        }
+    }
+
     fn parseFont(self: *Parser, table: *toml.Table) !void {
         if (table.keys.get("font")) |font| {
-            assert(font == .Table);
+            try assert(font == .Table);
 
             if (font.Table.keys.get("family")) |family| {
-                assert(family == .String);
+                try assert(family == .String);
 
                 self.result.?.font.family = try self.allocator.dupe(
                     u8,
@@ -112,7 +126,7 @@ pub const Parser = struct {
             }
 
             if (font.Table.keys.get("size")) |size| {
-                assert(size == .Integer);
+                try assert(size == .Integer);
                 self.result.?.font.size = size.Integer;
             }
         }
@@ -132,55 +146,93 @@ pub const Parser = struct {
         table: *const toml.Value,
         colors: *ColorsResult,
     ) !void {
-        assert(table.* == .Table);
+        try assert(table.* == .Table);
 
         if (table.*.Table.keys.get("black")) |black| {
-            assert(black == .String);
+            try assert(black == .String);
             try self.dupString(&colors.*.black, &black.String);
         }
 
         if (table.*.Table.keys.get("blue")) |blue| {
-            assert(blue == .String);
+            try assert(blue == .String);
             try self.dupString(&colors.*.blue, &blue.String);
         }
 
         if (table.*.Table.keys.get("cyan")) |cyan| {
-            assert(cyan == .String);
+            try assert(cyan == .String);
             try self.dupString(&colors.*.cyan, &cyan.String);
         }
 
         if (table.*.Table.keys.get("green")) |green| {
-            assert(green == .String);
+            try assert(green == .String);
             try self.dupString(&colors.*.green, &green.String);
         }
 
         if (table.*.Table.keys.get("magenta")) |magenta| {
-            assert(magenta == .String);
+            try assert(magenta == .String);
             try self.dupString(&colors.*.magenta, &magenta.String);
         }
 
         if (table.*.Table.keys.get("red")) |red| {
-            assert(red == .String);
+            try assert(red == .String);
             try self.dupString(&colors.*.red, &red.String);
         }
 
         if (table.*.Table.keys.get("white")) |white| {
-            assert(white == .String);
+            try assert(white == .String);
             try self.dupString(&colors.*.white, &white.String);
         }
 
         if (table.*.Table.keys.get("yellow")) |yellow| {
-            assert(yellow == .String);
+            try assert(yellow == .String);
             try self.dupString(&colors.*.yellow, &yellow.String);
+        }
+    }
+
+    fn parseCursor(self: *Parser, table: *toml.Table) !void {
+        if (table.keys.get("cursor")) |cursor| {
+            try assert(cursor == .Table);
+
+            if (cursor.Table.keys.get("shape")) |shape| {
+                try assert(shape == .String);
+
+                const valid_cursors = [_][]const u8{
+                    "block",
+                    "ibeam",
+                    "underline",
+                };
+
+                var ok = false;
+
+                for (valid_cursors) |element| {
+                    if (std.mem.eql(u8, element, shape.String)) {
+                        ok = true;
+                        break;
+                    }
+                }
+
+                if (!ok) {
+                    return error.InvalidCursor;
+                }
+
+                self.result.?.cursor.shape = try self.allocator.dupe(
+                    u8,
+                    shape.String,
+                );
+            }
+
+            if (cursor.Table.keys.get("blinking")) |blinking| {
+                self.result.?.cursor.blinking = blinking.Boolean;
+            }
         }
     }
 
     fn parseColors(self: *Parser, table: *toml.Table) !void {
         if (table.keys.get("colors")) |colors| {
-            assert(colors == .Table);
+            try assert(colors == .Table);
 
             if (colors.Table.keys.get("background")) |background| {
-                assert(background == .String);
+                try assert(background == .String);
                 self.result.?.colors.background = try self.allocator.dupe(
                     u8,
                     background.String,
@@ -188,7 +240,7 @@ pub const Parser = struct {
             }
 
             if (colors.Table.keys.get("foreground")) |foreground| {
-                assert(foreground == .String);
+                try assert(foreground == .String);
                 self.result.?.colors.foreground = try self.allocator.dupe(
                     u8,
                     foreground.String,
@@ -216,7 +268,7 @@ pub const Parser = struct {
     fn handleError(_: Parser, err: anyerror) void {
         const errcode = @as([]const u8, @errorName(err));
         const stdout = std.io.getStdOut().writer();
-        stdout.print("Error code {s} occurred!\n", .{errcode}) catch unreachable;
+        stdout.print("Error code '{s}' occurred!\n", .{errcode}) catch unreachable;
     }
 
     pub fn parse(self: *Parser) !*Result {
@@ -233,6 +285,7 @@ pub const Parser = struct {
         defer table.deinit();
 
         self.parseFont(table) catch |err| self.handleError(err);
+        self.parseCursor(table) catch |err| self.handleError(err);
         self.parseColors(table) catch |err| self.handleError(err);
 
         return self.result orelse @panic("result was not initialised");

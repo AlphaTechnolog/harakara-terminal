@@ -252,3 +252,19 @@ pub fn getTextSelected(self: Self, format: enums.Format) []const u8 {
 pub fn pasteText(self: Self, text: [:0]const u8) void {
     c.vte_terminal_paste_text(self.toRaw(), text.ptr);
 }
+
+/// Sets the shape of the cursor drawn.
+pub fn setCursorShape(self: Self, shape: enums.CursorShape) void {
+    c.vte_terminal_set_cursor_shape(
+        self.toRaw(),
+        @intFromEnum(shape),
+    );
+}
+
+/// Sets whether or not the cursor will blink.
+pub fn setCursorBlinkMode(self: Self, mode: enums.CursorBlinkMode) void {
+    c.vte_terminal_set_cursor_blink_mode(
+        self.toRaw(),
+        @intFromEnum(mode),
+    );
+}

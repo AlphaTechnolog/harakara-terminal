@@ -1,10 +1,12 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 const c = @import("./lib/c.zig");
 const utils = @import("./lib/utils.zig");
 const Application = @import("./lib/application.zig");
 const Terminal = @import("./terminal/init.zig");
 
+const isDevMode = @import("./terminal/utils.zig").isDevMode;
 const allocator = std.heap.page_allocator;
 
 fn activate(_: *c.GtkApplication, user_data: c.gpointer) void {
@@ -15,7 +17,11 @@ fn activate(_: *c.GtkApplication, user_data: c.gpointer) void {
 }
 
 pub fn main() u8 {
-    const app = Application.init("es.alphatechnolog.harakara", .default);
+    const app = Application.init(
+        if (isDevMode()) "dev.alphatechnolog.harakara" else "es.alphatechnolog.harakara",
+        .default,
+    );
+
     defer app.toGObject().unref();
 
     _ = app.connect(

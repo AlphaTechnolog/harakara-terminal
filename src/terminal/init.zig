@@ -11,6 +11,7 @@ const Clipboard = @import("../lib/clipboard.zig");
 const utils = @import("../lib/utils.zig");
 const types = @import("../lib/types.zig");
 
+const TermUtils = @import("./utils.zig");
 const AppearanceController = @import("./appearance.zig");
 
 const mem = std.mem;
@@ -194,7 +195,9 @@ fn onKeyPress(
 }
 
 pub fn setup(self: *Self) void {
-    self.window.asWindow().setTitle("Harakara");
+    const title = if (TermUtils.isDevMode()) "Harakara (Dev Build)" else "Harakara";
+
+    self.window.asWindow().setTitle(title);
 
     self.status_box.asWidget().setHAlign(.center);
     self.status_box.asWidget().setVAlign(.center);

@@ -2,6 +2,10 @@
 family = "monospace"
 size = 11
 
+[cursor]
+shape = "block"
+blinking = true
+
 [colors]
 background = '#141414'
 foreground = '#d8d8d8'

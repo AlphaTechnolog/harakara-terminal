@@ -2,6 +2,7 @@ const std = @import("std");
 const Config = @import("./config.zig");
 const c = @import("../lib/c.zig");
 const utils = @import("../lib/utils.zig");
+const enums = @import("../lib/enums.zig");
 const VteTerminal = @import("../lib/vte.zig");
 const Label = @import("../lib/label.zig");
 const Timeout = @import("../lib/timeout.zig");
@@ -146,6 +147,33 @@ pub fn restoreFontSize(self: *Self) !void {
     try self.afterFontSizeModify();
 }
 
+/// Setups the cursor style of the terminal.
+fn setupCursor(self: Self) void {
+    const cursor_value = self.config.cursor.shape;
+
+    var cursor: enums.CursorShape = .block;
+
+    if (cursor_value) |value| {
+        if (std.mem.eql(u8, value, "block")) {
+            cursor = .block;
+        }
+
+        if (std.mem.eql(u8, value, "ibeam")) {
+            cursor = .ibeam;
+        }
+
+        if (std.mem.eql(u8, value, "underline")) {
+            cursor = .underline;
+        }
+    }
+
+    self.terminal.setCursorShape(cursor);
+
+    self.terminal.setCursorBlinkMode(
+        if (self.config.cursor.blinking) .on else .off,
+    );
+}
+
 /// Setups the colorscheme of the terminal by using the parsed configuration file.
 fn setupColorscheme(self: Self) !void {
     const background_color: [:0]const u8 = @ptrCast(self.config.colors.background orelse "#141414");
@@ -165,6 +193,7 @@ fn setupColorscheme(self: Self) !void {
 /// configurations to the terminal.
 pub fn setup(self: Self) !void {
     try self.setupFont();
+    self.setupCursor();
     try self.setupColorscheme();
 }
 
