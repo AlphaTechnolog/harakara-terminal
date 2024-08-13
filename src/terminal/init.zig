@@ -79,7 +79,7 @@ fn handleClipboardRequest(
 ) void {
     const self = utils.castFromGPointer(Self, user_data);
 
-    if (arg_text != null or mem.len(arg_text) > 0) {
+    if (arg_text != null and mem.len(arg_text) > 0) {
         const text: [:0]const u8 = mem.span(arg_text);
         self.terminal.pasteText(text);
     }
