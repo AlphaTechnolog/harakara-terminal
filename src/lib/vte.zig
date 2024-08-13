@@ -238,7 +238,7 @@ pub fn pastePrimary(self: Self) void {
 }
 
 /// Gets the currently selected text in the format specified by format.
-pub fn getTextSelected(self: Self, format: enums.Format) [:0]const u8 {
+pub fn getTextSelected(self: Self, format: enums.Format) []const u8 {
     return std.mem.span(c.vte_terminal_get_text_selected(
         self.toRaw(),
         @intFromEnum(format),

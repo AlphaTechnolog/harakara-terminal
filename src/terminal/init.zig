@@ -79,7 +79,7 @@ fn handleClipboardRequest(
 ) void {
     const self = utils.castFromGPointer(Self, user_data);
 
-    if (mem.len(arg_text) > 0) {
+    if (arg_text != null or mem.len(arg_text) > 0) {
         const text: [:0]const u8 = mem.span(arg_text);
         self.terminal.pasteText(text);
     }
@@ -94,7 +94,7 @@ fn handleCopyPaste(
     },
 ) bool {
     if (opts.has_modifiers and opts.has_c) {
-        const text: []const u8 = @ptrCast(self.terminal.getTextSelected(.text));
+        const text = self.terminal.getTextSelected(.text);
         self.clipboard.setText(text);
         return true;
     }
