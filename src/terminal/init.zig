@@ -63,6 +63,8 @@ fn setupTerminal(self: Self) void {
         -1,
         null,
     );
+
+    self.terminal.setBoldIsBright(true);
 }
 
 fn onChildExited(_: *c.VteTerminal, _: c.gint, data: c.gpointer) void {
