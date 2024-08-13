@@ -5,11 +5,14 @@ const utils = @import("./lib/utils.zig");
 const Application = @import("./lib/application.zig");
 const Terminal = @import("./terminal/init.zig");
 
+const allocator = std.heap.page_allocator;
+
 fn activate(_: *c.GtkApplication, user_data: c.gpointer) void {
     const app = utils.castFromGPointer(Application, user_data);
-    var terminal = Terminal.init(std.heap.page_allocator, app) catch unreachable;
+    var terminal = Terminal.init(allocator, app) catch unreachable;
     terminal.setup();
     terminal.window.asWidget().showAll();
+    terminal.status_text.asWidget().hide();
 }
 
 pub fn main() u8 {

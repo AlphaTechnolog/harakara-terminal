@@ -43,3 +43,27 @@ pub const Format = enum(c_uint) {
     text = c.VTE_FORMAT_TEXT,
     html = c.VTE_FORMAT_HTML,
 };
+
+/// Controls how a widget deals with extra space in a single (x or y) dimension.
+///
+/// Alignment only matters if the widget receives a “too large” allocation, for example if you packed the widget with the GtkWidget:expand flag inside a GtkBox, then the widget might get extra space. If you have for example a 16x16 icon inside a 32x32 space, the icon could be scaled and stretched, it could be centered, or it could be positioned to one side of the space.
+///
+/// Note that in horizontal context GTK_ALIGN_START and GTK_ALIGN_END are interpreted relative to text direction.
+///
+/// GTK_ALIGN_BASELINE support for it is optional for containers and widgets, and it is only supported for vertical alignment. When its not supported by a child or a container it is treated as GTK_ALIGN_FILL.
+pub const GtkAlign = enum(c_uint) {
+    fill = c.GTK_ALIGN_FILL,
+    start = c.GTK_ALIGN_START,
+    end = c.GTK_ALIGN_END,
+    center = c.GTK_ALIGN_CENTER,
+    baseline = c.GTK_ALIGN_BASELINE,
+};
+
+/// Represents the orientation of widgets and other
+/// objects which can be switched between horizontal
+/// and vertical orientation on the fly, like
+/// GtkToolbar or GtkGesturePan.
+pub const GtkOrientation = enum(c_uint) {
+    horizontal = c.GTK_ORIENTATION_HORIZONTAL,
+    vertical = c.GTK_ORIENTATION_VERTICAL,
+};

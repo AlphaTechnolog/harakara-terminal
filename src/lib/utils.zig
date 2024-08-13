@@ -36,6 +36,12 @@ pub fn signalConnect(
     );
 }
 
+/// Converts any function or any type into a c.GSourceFunc
+/// by performing the needed casts to satisfy zig.
+pub inline fn castGSourceFunc(callback: anytype) c.GSourceFunc {
+    return @constCast(@ptrCast(@alignCast(&callback)));
+}
+
 /// Converts any function or any type into a c.GCallback
 /// by performing the needed casts to satisfy zig.
 pub inline fn castGCallback(callback: anytype) c.GCallback {
