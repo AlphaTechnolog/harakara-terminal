@@ -3,25 +3,25 @@ family = "monospace"
 size = 11
 
 [colors]
-background = '#161616'
-foreground = '#f2f4f8'
+background = '#141414'
+foreground = '#d8d8d8'
 
 [colors.normal]
-black   = '#282828'
-red     = '#ee5396'
-green   = '#25be6a'
-yellow  = '#08bdba'
-blue    = '#78a9ff'
-magenta = '#be95ff'
-cyan    = '#33b1ff'
-white   = '#dfdfe0'
+black   = '#181818'
+red     = '#ab4642'
+green   = '#a1b56c'
+yellow  = '#f7ca88'
+blue    = '#7cafc2'
+magenta = '#ba8baf'
+cyan    = '#86c1b9'
+white   = '#d8d8d8'
 
 [colors.bright]
-black   = '#484848'
-red     = '#f16da6'
-green   = '#46c880'
-yellow  = '#2dc7c4'
-blue    = '#8cb6ff'
-magenta = '#c8a5ff'
-cyan    = '#52bdff'
-white   = '#e4e4e5'
+black   = '#282828'
+red     = '#ab4642'
+green   = '#a1b56c'
+yellow  = '#f7ca88'
+blue    = '#7cafc2'
+magenta = '#ba8baf'
+cyan    = '#86c1b9'
+white   = '#f8f8f8'
