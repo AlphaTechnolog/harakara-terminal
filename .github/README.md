@@ -21,8 +21,6 @@ First install these dependencies:
 
 - vte-2.91 dev library
 - gtk+-3.0 dev library
-- wl-clipboard (wayland)
-- xclip (x11)
 - zig (0.13.0)
 
 > [!NOTE]
