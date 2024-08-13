@@ -11,8 +11,7 @@ fn activate(_: *c.GtkApplication, user_data: c.gpointer) void {
     const app = utils.castFromGPointer(Application, user_data);
     var terminal = Terminal.init(allocator, app) catch unreachable;
     terminal.setup();
-    terminal.window.asWidget().showAll();
-    terminal.status_text.asWidget().hide();
+    terminal.arrive();
 }
 
 pub fn main() u8 {

@@ -251,6 +251,13 @@ pub fn setup(self: *Self) void {
     );
 }
 
+/// This method is gonna be called after .setup()
+pub fn arrive(self: Self) void {
+    self.window.asWidget().showAll();
+    self.status_text.asWidget().hide();
+}
+
+/// Frees all the allocated resources previously.
 pub fn deinit(self: *Self) void {
     self.appearance.deinit();
     self.terminal.asWidget().destroy();
