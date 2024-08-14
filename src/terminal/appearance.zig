@@ -151,23 +151,10 @@ pub fn restoreFontSize(self: *Self) !void {
 fn setupCursor(self: Self) void {
     const cursor_value = self.config.cursor.shape;
 
-    var cursor: enums.CursorShape = .block;
-
-    if (cursor_value) |value| {
-        if (std.mem.eql(u8, value, "block")) {
-            cursor = .block;
-        }
-
-        if (std.mem.eql(u8, value, "ibeam")) {
-            cursor = .ibeam;
-        }
-
-        if (std.mem.eql(u8, value, "underline")) {
-            cursor = .underline;
-        }
-    }
-
-    self.terminal.setCursorShape(cursor);
+    self.terminal.setCursorShape(std.meta.stringToEnum(
+        enums.CursorShape,
+        cursor_value orelse "block",
+    ) orelse .block);
 
     self.terminal.setCursorBlinkMode(
         if (self.config.cursor.blinking) .on else .off,
