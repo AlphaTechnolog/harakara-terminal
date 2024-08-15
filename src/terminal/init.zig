@@ -227,10 +227,10 @@ pub fn setup(self: *Self) void {
 
     // TODO: fetching config this way usually means that this css loading should be done
     // in another way, using a module or something like that...
-    const black = self.appearance.config.colors.bright.black orelse "#282828";
+    const foreground = self.appearance.config.colors.foreground orelse "#d8d8d8";
     var css_output: [1024]u8 = undefined;
-    _ = std.mem.replace(u8, css_template, "FOREGROUND_COLOR", black, css_output[0..]);
-    const size = std.mem.replacementSize(u8, css_template, "FOREGROUND_COLOR", black);
+    _ = std.mem.replace(u8, css_template, "FOREGROUND_COLOR", foreground, css_output[0..]);
+    const size = std.mem.replacementSize(u8, css_template, "FOREGROUND_COLOR", foreground);
     const css_content: [:0]const u8 = @ptrCast(css_output[0..size]);
 
     _ = c.gtk_css_provider_load_from_data(
