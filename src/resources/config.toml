@@ -2,6 +2,9 @@
 family = "monospace"
 size = 11
 
+[window]
+padding = 4
+
 [cursor]
 shape = "block"
 blinking = true
