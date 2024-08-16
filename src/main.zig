@@ -19,7 +19,7 @@ fn activate(_: *c.GtkApplication, user_data: c.gpointer) void {
 pub fn main() u8 {
     const app = Application.init(
         if (isDevMode()) "dev.alphatechnolog.harakara" else "es.alphatechnolog.harakara",
-        .default,
+        .non_unique,
     );
 
     defer app.toGObject().unref();
