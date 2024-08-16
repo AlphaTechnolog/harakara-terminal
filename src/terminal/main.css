@@ -1,0 +1,10 @@
+#main-container {
+  padding: ^PADDING_VALUE^px;
+  background-color: ^BACKGROUND_COLOR^;
+}
+
+#information-container {
+  font-size: 32px;
+  font-family: Inter;
+  color: ^FOREGROUND_COLOR^;
+}

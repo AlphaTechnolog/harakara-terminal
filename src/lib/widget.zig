@@ -23,6 +23,21 @@ pub fn setVAlign(self: Self, valign: enums.GtkAlign) void {
     c.gtk_widget_set_valign(self.toRaw(), @intFromEnum(valign));
 }
 
+/// Sets if a widget should be expanded vertically.
+pub fn setVExpand(self: Self, vexpand: bool) void {
+    c.gtk_widget_set_vexpand(self.toRaw(), utils.boolToCInt(vexpand));
+}
+
+/// Sets if a widget should be expanded horizontally.
+pub fn setHExpand(self: Self, hexpand: bool) void {
+    c.gtk_widget_set_hexpand(self.toRaw(), utils.boolToCInt(hexpand));
+}
+
+/// Widgets can be named, which allows you to refer to them from a CSS file.
+pub fn setName(self: Self, name: []const u8) void {
+    c.gtk_widget_set_name(self.toRaw(), name.ptr);
+}
+
 /// Connects the widget to the given signal by passing a callback and
 /// an user_data value.
 ///

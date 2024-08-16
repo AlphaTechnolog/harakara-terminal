@@ -37,6 +37,10 @@ pub const Parser = struct {
             size: i64,
         },
 
+        window: struct {
+            padding: ?i64,
+        },
+
         cursor: struct {
             shape: ?[]u8,
             blinking: bool,
@@ -55,6 +59,7 @@ pub const Parser = struct {
             instance.allocator = allocator;
             instance.font = .{ .family = null, .size = 0 };
             instance.cursor = .{ .shape = null, .blinking = true };
+            instance.window = .{ .padding = null };
 
             instance.colors = .{
                 .background = null,
@@ -227,6 +232,17 @@ pub const Parser = struct {
         }
     }
 
+    fn parseWindow(self: *Parser, table: *toml.Table) !void {
+        if (table.keys.get("window")) |window| {
+            try assert(window == .Table);
+
+            if (window.Table.keys.get("padding")) |padding| {
+                try assert(padding == .Integer);
+                self.result.?.window.padding = padding.Integer;
+            }
+        }
+    }
+
     fn parseColors(self: *Parser, table: *toml.Table) !void {
         if (table.keys.get("colors")) |colors| {
             try assert(colors == .Table);
@@ -286,6 +302,7 @@ pub const Parser = struct {
 
         self.parseFont(table) catch |err| self.handleError(err);
         self.parseCursor(table) catch |err| self.handleError(err);
+        self.parseWindow(table) catch |err| self.handleError(err);
         self.parseColors(table) catch |err| self.handleError(err);
 
         return self.result orelse @panic("result was not initialised");

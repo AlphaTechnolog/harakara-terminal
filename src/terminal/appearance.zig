@@ -7,6 +7,7 @@ const VteTerminal = @import("../lib/vte.zig");
 const Label = @import("../lib/label.zig");
 const Timeout = @import("../lib/timeout.zig");
 const GdkRGBA = @import("../lib/gdk_rgba.zig");
+const CSSTemplate = @import("./utils/css_template.zig");
 
 const mem = std.mem;
 const fmt = std.fmt;
@@ -27,6 +28,9 @@ current_font_size: i64,
 
 /// The status text overlay which will print the font size.
 status_text: *Label,
+
+/// CSS processor instance
+css_processor: CSSTemplate,
 
 /// Time manager for hiding the status text properly, there's prolly a far
 /// better way, but this is what i could have figured out in my own...
@@ -55,6 +59,11 @@ pub fn init(allocator: mem.Allocator, terminal: *VteTerminal, status_text: *Labe
         .config = parsed_config,
         .timeout_current_id = 0,
         .current_font_size = parsed_config.font.size,
+
+        .css_processor = try CSSTemplate.init(
+            allocator,
+            @embedFile("./main.css"),
+        ),
     };
 }
 
@@ -176,15 +185,58 @@ fn setupColorscheme(self: Self) !void {
     );
 }
 
+/// Load the css styles. This one passes values such as indicator
+/// foreground, background and window padding.
+fn setupCSS(self: *Self) !void {
+    var css_context = std.StringHashMap([]const u8).init(self.allocator);
+    defer css_context.deinit();
+
+    const window = self.config.window;
+    const padding = window.padding orelse 0;
+    const colors = self.config.colors;
+    const foreground = colors.foreground orelse "#d8d8d8";
+    const background = colors.background orelse "#141414";
+
+    const padding_str = try std.fmt.allocPrint(
+        self.allocator,
+        "{d}",
+        .{padding},
+    );
+
+    defer self.allocator.free(padding_str);
+
+    try css_context.put("PADDING_VALUE", padding_str);
+    try css_context.put("BACKGROUND_COLOR", background);
+    try css_context.put("FOREGROUND_COLOR", foreground);
+
+    self.css_processor.parseTemplate(&css_context) catch |err| {
+        if (err == error.InvalidExpansionSyntaxError) {
+            @panic("Syntax error in internal css template detected!");
+        }
+
+        std.debug.panic("Unexpected error occurred: {s}\n", .{
+            @errorName(err),
+        });
+
+        std.process.exit(1);
+
+        unreachable;
+    };
+
+    try self.css_processor.loadForDisplay();
+}
+
 /// This function will start the process of applying the appearance-related
 /// configurations to the terminal.
-pub fn setup(self: Self) !void {
+pub fn setup(self: *Self) !void {
     try self.setupFont();
     self.setupCursor();
+    try self.setupCSS();
     try self.setupColorscheme();
 }
 
 /// Releases allocated memory from the config file.
 pub fn deinit(self: *Self) void {
+    self.css_processor.deinit();
     self.config.deinit();
 }

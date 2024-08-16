@@ -13,6 +13,7 @@ const types = @import("../lib/types.zig");
 
 const TermUtils = @import("./utils.zig");
 const AppearanceController = @import("./appearance.zig");
+const CSSTemplate = @import("./utils/css_template.zig");
 
 const mem = std.mem;
 const posix = std.posix;
@@ -209,46 +210,21 @@ pub fn setup(self: *Self) void {
         0,
     );
 
-    // TODO: Improve this api and add an abstractation for loading css.
-    c.gtk_widget_set_name(self.status_box.asWidget().toRaw(), "information-container");
-
-    const css_provider = c.gtk_css_provider_new();
-
-    const css_template =
-        \\#information-container {
-        \\  font-size: 32px;
-        \\  font-family: Inter;
-        \\  color: FOREGROUND_COLOR;
-        \\}
-        \\
-    ;
-
-    // processing the css template so we replace that `FOREGROUND_COLOR` in a real fg color.
-
-    // TODO: fetching config this way usually means that this css loading should be done
-    // in another way, using a module or something like that...
-    const foreground = self.appearance.config.colors.foreground orelse "#d8d8d8";
-    var css_output: [1024]u8 = undefined;
-    _ = std.mem.replace(u8, css_template, "FOREGROUND_COLOR", foreground, css_output[0..]);
-    const size = std.mem.replacementSize(u8, css_template, "FOREGROUND_COLOR", foreground);
-    const css_content: [:0]const u8 = @ptrCast(css_output[0..size]);
-
-    _ = c.gtk_css_provider_load_from_data(
-        css_provider,
-        css_content.ptr,
-        @intCast(css_content.len),
-        null,
-    );
-
-    c.gtk_style_context_add_provider_for_screen(
-        c.gdk_screen_get_default(),
-        @as(*c.GtkStyleProvider, @ptrCast(css_provider)),
-        c.GTK_STYLE_PROVIDER_PRIORITY_USER,
-    );
+    self.status_box.asWidget().setName("information-container");
 
     self.main_overlay.addOverlay(self.status_box.asWidget());
     self.main_overlay.asContainer().add(self.terminal.asWidget());
-    self.window.asContainer().add(self.main_overlay.asWidget());
+    self.main_overlay.asWidget().setVExpand(true);
+
+    const content_box = Box.init(.{
+        .orientation = .vertical,
+        .spacing = 0,
+    });
+
+    content_box.asContainer().add(self.main_overlay.asWidget());
+    content_box.asWidget().setName("main-container");
+
+    self.window.asContainer().add(content_box.asWidget());
 
     self.appearance.setup() catch {
         @panic("Unable to load appearance settings");
