@@ -62,7 +62,7 @@ pub fn init(allocator: mem.Allocator, terminal: *VteTerminal, status_text: *Labe
 
         .css_processor = try CSSTemplate.init(
             allocator,
-            @embedFile("./main.css"),
+            @embedFile("../resources/main.css"),
         ),
     };
 }
