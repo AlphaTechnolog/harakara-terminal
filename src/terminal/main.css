@@ -1,3 +1,9 @@
+/**
+ * This file is being processed via src/terminal/utils/css_template.zig
+ * so context variables that comes from zig code, can be referenced using the syntax:
+ * `^{key}^`, e.g: `color: ^LABEL_COLOR^;`
+ */
+
 #main-container {
   padding: ^PADDING_VALUE^px;
   background-color: ^BACKGROUND_COLOR^;
