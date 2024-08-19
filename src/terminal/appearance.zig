@@ -149,21 +149,22 @@ fn updateFontSizeIndicator(self: *Self) !void {
 }
 
 /// Functions to run after the current_font_size attribute has been modified
-inline fn afterFontSizeModify(self: *Self) !void {
+inline fn modifyFontSize(self: *Self, new_size: i64) !void {
+    self.current_font_size = new_size;
     try self.updateFontSizeIndicator();
     try self.setupFont();
 }
 
 /// Applies a zoom of n pixels to the current font size
 pub fn applyFontZoom(self: *Self, n: i64) !void {
-    self.current_font_size += n;
-    try self.afterFontSizeModify();
+    if (!(n < 0 and self.current_font_size == 1)) {
+        try self.modifyFontSize(self.current_font_size + n);
+    }
 }
 
 /// Restores the original font size of the terminal.
 pub fn restoreFontSize(self: *Self) !void {
-    self.current_font_size = self.config.font.size;
-    try self.afterFontSizeModify();
+    try self.modifyFontSize(self.config.font.size);
 }
 
 /// Setups the cursor style of the terminal.
