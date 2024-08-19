@@ -157,7 +157,7 @@ fn onKeyPress(
     const event = types.intoGdkEventKey(arg_event);
 
     const control_mask: c.guint = c.GDK_CONTROL_MASK;
-    const shift_mask: c.guint = c.GDK_CONTROL_MASK;
+    const shift_mask: c.guint = c.GDK_SHIFT_MASK;
 
     const state = event.*.state;
 
