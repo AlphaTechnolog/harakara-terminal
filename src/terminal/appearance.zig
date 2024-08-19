@@ -76,7 +76,17 @@ fn setupFont(self: Self) !void {
 
     defer self.allocator.free(font_format);
 
-    self.terminal.setFontFromString(@ptrCast(font_format));
+    const cstring: [:0]u8 = try self.allocator.allocSentinel(
+        u8,
+        font_format.len,
+        0,
+    );
+
+    defer self.allocator.free(cstring);
+
+    @memcpy(cstring, font_format);
+
+    self.terminal.setFontFromString(cstring);
 }
 
 fn onTimeoutImpl(self: *Self, timer_id: u32) bool {
