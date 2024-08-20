@@ -205,7 +205,7 @@ fn setupCSS(self: *Self) !void {
     const window = self.config.window;
     const padding = window.padding orelse 0;
     const colors = self.config.colors;
-    const foreground = colors.foreground orelse "#d8d8d8";
+    const indicator_color = colors.extra.zoom_indicator orelse colors.foreground orelse "#d8d8d8";
     const background = colors.background orelse "#141414";
 
     const padding_str = try std.fmt.allocPrint(
@@ -218,7 +218,7 @@ fn setupCSS(self: *Self) !void {
 
     try css_context.put("PADDING_VALUE", padding_str);
     try css_context.put("BACKGROUND_COLOR", background);
-    try css_context.put("FOREGROUND_COLOR", foreground);
+    try css_context.put("ZOOM_INDICATOR_COLOR", indicator_color);
 
     self.css_processor.parseTemplate(&css_context) catch |err| {
         if (err == error.InvalidExpansionSyntaxError) {

@@ -13,6 +13,9 @@ blinking = true
 background = '#141414'
 foreground = '#d8d8d8'
 
+[colors.extra]
+zoom-indicator = '#323232'
+
 [colors.normal]
 black   = '#181818'
 red     = '#ab4642'

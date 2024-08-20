@@ -51,6 +51,10 @@ pub const Parser = struct {
             foreground: ?[]u8,
             normal: ColorsResult,
             bright: ColorsResult,
+
+            extra: struct {
+                zoom_indicator: ?[]u8,
+            },
         },
 
         pub fn init(allocator: mem.Allocator) !*Result {
@@ -64,6 +68,7 @@ pub const Parser = struct {
             instance.colors = .{
                 .background = null,
                 .foreground = null,
+                .extra = .{ .zoom_indicator = null },
                 .normal = .{
                     .black = null,
                     .blue = null,
@@ -261,6 +266,18 @@ pub const Parser = struct {
                     u8,
                     foreground.String,
                 );
+            }
+
+            if (colors.Table.keys.get("extra")) |extra| {
+                try assert(extra == .Table);
+
+                if (extra.Table.keys.get("zoom-indicator")) |zoom_indicator| {
+                    try assert(zoom_indicator == .String);
+                    self.result.?.colors.extra.zoom_indicator = try self.allocator.dupe(
+                        u8,
+                        zoom_indicator.String,
+                    );
+                }
             }
 
             if (colors.Table.keys.get("normal")) |normal| {

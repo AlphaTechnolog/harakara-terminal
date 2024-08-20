@@ -12,5 +12,5 @@
 #information-container {
   font-size: 32px;
   font-family: Inter;
-  color: ^FOREGROUND_COLOR^;
+  color: ^ZOOM_INDICATOR_COLOR^;
 }
