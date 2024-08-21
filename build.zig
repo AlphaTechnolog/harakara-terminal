@@ -51,7 +51,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const exe = b.addExecutable(.{
-        .name = "harakara-terminal",
+        .name = "Harakara",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
