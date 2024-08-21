@@ -1,16 +1,8 @@
 const std = @import("std");
 
 fn pkgConfig(b: *std.Build, exe: *std.Build.Step.Compile) !void {
-    _ = b;
-
+    const allocator = b.allocator;
     const argv = [_][]const u8{ "pkg-config", "--cflags", "--libs", "gtk+-3.0", "vte-2.91" };
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-
-    defer if (gpa.deinit() == .leak) {
-        @panic("mem leaked");
-    };
-
-    const allocator = gpa.allocator();
 
     const result = try std.process.Child.run(.{
         .allocator = allocator,
