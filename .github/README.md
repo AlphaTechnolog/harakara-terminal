@@ -37,10 +37,10 @@ zig build -Doptimize=ReleaseSafe
 Then install the binary with this command:
 
 ```sh
-sudo install -Dvm755 ./zig-out/bin/harakara-terminal /bin/Harakara
+sudo zig build -Doptimize=ReleaseSafe --prefix /usr install
 ```
 
-> Then you'll be able to just run `Harakara` in your terminal.
+> Then you'll be able to just run `Harakara` to open the terminal.
 
 ## Configuration
 
