@@ -31,7 +31,6 @@ Then run these commands:
 ```sh
 git clone https://github.com/AlphaTechnolog/harakara-terminal harakara-terminal
 cd harakara-terminal
-zig build -Doptimize=ReleaseSafe
 ```
 
 Then install the binary with this command:
