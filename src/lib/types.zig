@@ -2,7 +2,7 @@ const c = @import("./c.zig");
 
 /// Reimplementation of the GdkEventKey type since it's broken
 /// when using zig translate-c because of bitfields.
-const GdkEventKey = extern struct {
+pub const GdkEventKey = extern struct {
     type: c.GdkEventType,
     window: ?*anyopaque,
     send_event: c.gint8,

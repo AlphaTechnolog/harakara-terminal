@@ -69,11 +69,6 @@ fn setupTerminal(self: Self) void {
     self.terminal.setBoldIsBright(true);
 }
 
-fn onChildExited(_: *c.VteTerminal, _: c.gint, data: c.gpointer) void {
-    var self = utils.castFromGPointer(Self, data);
-    self.deinit();
-}
-
 fn handleClipboardRequest(
     _: *c.GtkClipboard,
     arg_text: [*c]const c.gchar,
@@ -148,14 +143,7 @@ fn handleTermZoom(
     return false;
 }
 
-fn onKeyPress(
-    _: *c.GtkWidget,
-    arg_event: *c.GdkEventKey,
-    data: c.gpointer,
-) c.gboolean {
-    var self = utils.castFromGPointer(Self, data);
-    const event = types.intoGdkEventKey(arg_event);
-
+fn handleKeyPress(self: *Self, event: *types.GdkEventKey) !bool {
     const control_mask: c.guint = c.GDK_CONTROL_MASK;
     const shift_mask: c.guint = c.GDK_SHIFT_MASK;
 
@@ -178,24 +166,24 @@ fn onKeyPress(
     });
 
     if (copy_paste) {
-        return utils.boolToCInt(true);
+        return true;
     }
 
-    const zoom_action = self.handleTermZoom(.{
+    const zoom_action = try self.handleTermZoom(.{
         .has_ctrl = holding_ctrl,
         .has_equal = has_equal,
         .has_minus = has_minus,
         .has_zero = has_zero,
-    }) catch @panic("Unable to zoom in/out terminal");
+    });
 
     if (zoom_action) {
-        return utils.boolToCInt(true);
+        return true;
     }
 
-    return utils.boolToCInt(false);
+    return false;
 }
 
-pub fn setup(self: *Self) void {
+pub fn setup(self: *Self) *Self {
     const title = if (TermUtils.isDevMode()) "Harakara (Dev Build)" else "Harakara";
 
     self.window.asWindow().setTitle(title);
@@ -232,17 +220,39 @@ pub fn setup(self: *Self) void {
 
     self.setupTerminal();
 
-    // handles terminal resources cleanups.
-    self.terminal.connectChildExited(
-        utils.castGCallback(Self.onChildExited),
+    const ConnectHandlers = struct {
+        /// Frees memory when the terminal shell exits & also close the window.
+        /// Receives a data argument which is a gpointer to `Self`
+        pub fn onTerminalExit(_: *c.VteTerminal, _: c.gint, data: c.gpointer) callconv(.C) void {
+            var terminal = utils.castFromGPointer(Self, data);
+            terminal.deinit();
+        }
+
+        /// Handles the terminal key press events, this allows the user per example to
+        /// zoom in/out by pressing ctrl & + / ctrl & - and also copy paste using keyboard shortcuts.
+        pub fn onKeyPress(_: *c.GtkWidget, event: *c.GdkEventKey, data: c.gpointer) callconv(.C) c.gboolean {
+            var terminal = utils.castFromGPointer(Self, data);
+            return utils.boolToCInt(
+                terminal.handleKeyPress(
+                    types.intoGdkEventKey(event),
+                ) catch unreachable,
+            );
+        }
+    };
+
+    self.terminal.connect(
+        "child-exited",
+        utils.castGCallback(ConnectHandlers.onTerminalExit),
         utils.castGPointer(self),
     );
 
-    // handles keybindings.
-    self.window.asWindow().connectKeyPress(
-        utils.castGCallback(Self.onKeyPress),
+    self.window.asWindow().connect(
+        "key-press-event",
+        utils.castGCallback(ConnectHandlers.onKeyPress),
         utils.castGPointer(self),
     );
+
+    return self;
 }
 
 /// This method is gonna be called after .setup()

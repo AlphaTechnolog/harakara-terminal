@@ -9,13 +9,6 @@ const Terminal = @import("./terminal/init.zig");
 const isDevMode = @import("./terminal/utils.zig").isDevMode;
 const allocator = std.heap.page_allocator;
 
-fn activate(_: *c.GtkApplication, user_data: c.gpointer) void {
-    const app = utils.castFromGPointer(Application, user_data);
-    var terminal = Terminal.init(allocator, app) catch unreachable;
-    terminal.setup();
-    terminal.arrive();
-}
-
 pub fn main() u8 {
     const app = Application.init(
         if (isDevMode()) "dev.alphatechnolog.harakara" else "es.alphatechnolog.harakara",
@@ -24,9 +17,17 @@ pub fn main() u8 {
 
     defer app.toGObject().unref();
 
-    _ = app.connect(
+    const ConnectHandlers = struct {
+        pub fn onActivate(_: *c.GtkApplication, data: c.gpointer) callconv(.C) void {
+            const self = utils.castFromGPointer(Application, data);
+            var terminal = Terminal.init(allocator, self) catch @panic("Unable to create terminal instance");
+            terminal.setup().arrive();
+        }
+    };
+
+    app.connect(
         "activate",
-        utils.castGCallback(activate),
+        utils.castGCallback(ConnectHandlers.onActivate),
         utils.castGPointer(&app),
     );
 
