@@ -4,6 +4,7 @@ size = 11
 
 [window]
 padding = 4
+default-dimensions = { x = 800, y = 600 }
 
 [cursor]
 shape = "block"

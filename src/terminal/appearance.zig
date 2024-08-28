@@ -1,5 +1,6 @@
 const std = @import("std");
 const Config = @import("./config.zig");
+const Window = @import("../lib/window.zig");
 const c = @import("../lib/c.zig");
 const utils = @import("../lib/utils.zig");
 const enums = @import("../lib/enums.zig");
@@ -16,6 +17,9 @@ const Self = @This();
 
 /// The used memory allocator object.
 allocator: mem.Allocator,
+
+/// The current window widget being used.
+window: *Window.ApplicationWindow,
 
 /// The current terminal pointer instance.
 terminal: *VteTerminal,
@@ -43,28 +47,53 @@ const HideTimerState = struct {
 };
 
 /// Initialiases the appearance component
-pub fn init(allocator: mem.Allocator, terminal: *VteTerminal, status_text: *Label) !Self {
+pub fn init(
+    allocator: mem.Allocator,
+    window: *Window.ApplicationWindow,
+    terminal: *VteTerminal,
+    status_text: *Label,
+) !Self {
     const config = Config.init(allocator);
     const parsed_config = try config.parse();
 
-    const initial_format = try fmt.allocPrint(allocator, "{d}px", .{parsed_config.font.size});
+    const initial_format = try fmt.allocPrint(allocator, "{d}px", .{parsed_config.font.size orelse 11});
     defer allocator.free(initial_format);
 
     status_text.*.setText(@ptrCast(initial_format));
 
     return Self{
+        .window = window,
         .terminal = terminal,
         .allocator = allocator,
         .status_text = status_text,
         .config = parsed_config,
         .timeout_current_id = 0,
-        .current_font_size = parsed_config.font.size,
+        .current_font_size = parsed_config.font.size orelse 11,
 
         .css_processor = try CSSTemplate.init(
             allocator,
             @embedFile("../resources/main.css"),
         ),
     };
+}
+
+/// Setups the default terminal size values
+fn setupDimensions(self: Self) void {
+    const T = @TypeOf(self.config.window.default_dimensions);
+
+    const default_dimensions: T = self.config.window.default_dimensions orelse .{
+        .x = 800,
+        .y = 600,
+    };
+
+    const window = self.window.asWindow();
+
+    if (default_dimensions) |dimensions| {
+        window.setDefaultSize(
+            @intCast(dimensions.x orelse 800),
+            @intCast(dimensions.y orelse 600),
+        );
+    }
 }
 
 /// Setups the terminal font by using the parsed configuration file.
@@ -164,7 +193,7 @@ pub fn applyFontZoom(self: *Self, n: i64) !void {
 
 /// Restores the original font size of the terminal.
 pub fn restoreFontSize(self: *Self) !void {
-    try self.modifyFontSize(self.config.font.size);
+    try self.modifyFontSize(self.config.font.size orelse 11);
 }
 
 /// Setups the cursor style of the terminal.
@@ -240,6 +269,7 @@ fn setupCSS(self: *Self) !void {
 /// This function will start the process of applying the appearance-related
 /// configurations to the terminal.
 pub fn setup(self: *Self) !void {
+    self.setupDimensions();
     try self.setupFont();
     self.setupCursor();
     try self.setupCSS();
