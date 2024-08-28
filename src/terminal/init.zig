@@ -47,6 +47,7 @@ pub fn init(allocator: mem.Allocator, app: *Application) !*Self {
 
     instance.appearance = try AppearanceController.init(
         allocator,
+        &instance.window,
         &instance.terminal,
         &instance.status_text,
     );

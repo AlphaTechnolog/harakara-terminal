@@ -29,16 +29,22 @@ pub const Parser = struct {
         yellow: ?[]u8,
     };
 
+    const Vector = struct {
+        x: ?i64,
+        y: ?i64,
+    };
+
     pub const Result = struct {
         allocator: mem.Allocator,
 
         font: struct {
             family: ?[]u8,
-            size: i64,
+            size: ?i64,
         },
 
         window: struct {
             padding: ?i64,
+            default_dimensions: ?Vector,
         },
 
         cursor: struct {
@@ -61,9 +67,13 @@ pub const Parser = struct {
             var instance = try allocator.create(Result);
 
             instance.allocator = allocator;
-            instance.font = .{ .family = null, .size = 0 };
+            instance.font = .{ .family = null, .size = null };
             instance.cursor = .{ .shape = null, .blinking = true };
-            instance.window = .{ .padding = null };
+
+            instance.window = .{
+                .padding = null,
+                .default_dimensions = null,
+            };
 
             instance.colors = .{
                 .background = null,
@@ -237,6 +247,35 @@ pub const Parser = struct {
         }
     }
 
+    const VectorParseError = anyerror || error{
+        InvalidTOMLTableError,
+    };
+
+    fn parseOptionalVector(_: Parser, ptr: *?Vector, table_ptr: *const toml.Value) VectorParseError!void {
+        if (!(table_ptr.* == .Table)) {
+            return error.InvalidTOMLTableError;
+        }
+
+        const table = table_ptr.*;
+
+        if (ptr.* == null) {
+            ptr.* = .{
+                .x = null,
+                .y = null,
+            };
+        }
+
+        if (table.Table.keys.get("x")) |x| {
+            try assert(x == .Integer);
+            ptr.*.?.x = x.Integer;
+        }
+
+        if (table.Table.keys.get("y")) |y| {
+            try assert(y == .Integer);
+            ptr.*.?.y = y.Integer;
+        }
+    }
+
     fn parseWindow(self: *Parser, table: *toml.Table) !void {
         if (table.keys.get("window")) |window| {
             try assert(window == .Table);
@@ -244,6 +283,15 @@ pub const Parser = struct {
             if (window.Table.keys.get("padding")) |padding| {
                 try assert(padding == .Integer);
                 self.result.?.window.padding = padding.Integer;
+            }
+
+            if (window.Table.keys.get("default-dimensions")) |*default_dimensions| {
+                try assert(default_dimensions.* == .Table);
+
+                try self.parseOptionalVector(
+                    &self.result.?.window.default_dimensions,
+                    default_dimensions,
+                );
             }
         }
     }

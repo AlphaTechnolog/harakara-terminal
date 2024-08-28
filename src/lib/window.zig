@@ -1,3 +1,4 @@
+const std = @import("std");
 const c = @import("./c.zig");
 const utils = @import("./utils.zig");
 
@@ -42,7 +43,7 @@ pub const Window = struct {
 
     /// Set a default size of the current window instance.
     pub fn setDefaultSize(self: Self, hsize: c_int, vsize: c_int) void {
-        c.gtk_window_set_default_size(self.toRaw, hsize, vsize);
+        c.gtk_window_set_default_size(self.toRaw(), hsize, vsize);
     }
 
     /// Set if the window should be decorated or not.
