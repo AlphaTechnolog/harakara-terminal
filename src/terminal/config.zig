@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const toml = @import("../extern/toml.zig");
 
 const mem = std.mem;
@@ -394,6 +395,28 @@ fn createFolderIfPossible(dirname: []const u8) !fs.Dir {
 fn createConfigFiles(self: Self, dirname_path: []u8) ![]u8 {
     const config_folder = try createFolderIfPossible(dirname_path);
 
+    // tryna stat if possible, if the file doesn't exists we're gonna try to create it.
+    const stat: ?std.fs.Dir.Stat = value: {
+        break :value config_folder.statFile("config.toml") catch |err| {
+            if (err != error.FileNotFound) {
+                return err;
+            }
+
+            break :value null;
+        };
+    };
+
+    // if the file exists we'll just read it and return it immediately, without creating it.
+    if (stat) |file_stat| {
+        var config_file = try config_folder.openFile("config.toml", .{});
+        defer config_file.close();
+
+        return try config_file.readToEndAlloc(
+            self.allocator,
+            file_stat.size,
+        );
+    }
+
     const config_file = try config_folder.createFile("./config.toml", .{
         .read = true,
         .truncate = false,
@@ -434,6 +457,12 @@ pub fn parse(self: Self) !*Parser.Result {
     };
 
     defer self.allocator.free(config);
+
+    if (builtin.mode == .Debug) {
+        std.debug.print("Loading config file:\n{s}\n", .{
+            config,
+        });
+    }
 
     var parser = Parser.init(self.allocator, config);
     return try parser.parse();
