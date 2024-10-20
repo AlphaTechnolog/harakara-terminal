@@ -17,7 +17,7 @@
 
   zigCacheHash = import ./zigCacheHash.nix;
 
-  # cache fixes thanks to the ghosty project.
+  # cache fixes thanks to the ghostty project.
   zigCache = stdenv.mkDerivation {
     inherit src;
 
