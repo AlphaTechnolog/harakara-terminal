@@ -57,9 +57,10 @@ pub fn init(
     const parsed_config = try config.parse();
 
     const initial_format = try fmt.allocPrint(allocator, "{d}px", .{parsed_config.font.size orelse 11});
+    // freeing since setText should already copy the text internally using gtk.
     defer allocator.free(initial_format);
 
-    status_text.*.setText(@ptrCast(initial_format));
+    status_text.*.setText(initial_format);
 
     return Self{
         .window = window,
@@ -153,8 +154,7 @@ fn updateFontSizeIndicator(self: *Self) !void {
     );
 
     defer self.allocator.free(new_indicator_text);
-
-    self.status_text.setText(@ptrCast(new_indicator_text));
+    self.status_text.setText(new_indicator_text);
 
     const status_label = self.status_text.asWidget();
     status_label.show();
@@ -212,11 +212,15 @@ fn setupCursor(self: Self) void {
 
 /// Setups the colorscheme of the terminal by using the parsed configuration file.
 fn setupColorscheme(self: Self) !void {
-    const background_color: [:0]const u8 = @ptrCast(self.config.colors.background orelse "#141414");
-    const foreground_color: [:0]const u8 = @ptrCast(self.config.colors.foreground orelse "#ffffff");
+    var bg_buf: [214]u8 = undefined;
+    var fg_buf: [214]u8 = undefined;
 
-    var background_rgba = try GdkRGBA.fromFormat(background_color);
-    var foreground_rgba = try GdkRGBA.fromFormat(foreground_color);
+    const colors = self.config.colors;
+    const bg = try std.fmt.bufPrintZ(&bg_buf, "{s}", .{colors.background orelse "#141414"});
+    const fg = try std.fmt.bufPrintZ(&fg_buf, "{s}", .{colors.foreground orelse "#ffffff"});
+
+    var background_rgba = try GdkRGBA.fromFormat(bg);
+    var foreground_rgba = try GdkRGBA.fromFormat(fg);
 
     try self.terminal.setColors(
         &foreground_rgba,
