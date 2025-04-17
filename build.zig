@@ -14,7 +14,7 @@ fn pkgConfig(b: *std.Build, exe: *std.Build.Step.Compile) !void {
         allocator.free(result.stderr);
     }
 
-    var it = std.mem.tokenize(u8, result.stdout, " ");
+    var it = std.mem.tokenizeAny(u8, result.stdout, " ");
 
     while (it.next()) |parameter| {
         const trimmed_parameter = std.mem.trim(u8, parameter, "\n");

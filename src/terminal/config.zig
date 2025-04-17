@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const toml = @import("../extern/toml.zig");
+const Config = @import("../extern/config.zig");
 
 const mem = std.mem;
 const fs = std.fs;
@@ -28,6 +28,16 @@ pub const Parser = struct {
         red: ?[]u8,
         white: ?[]u8,
         yellow: ?[]u8,
+
+        pub fn deinit(self: *ColorsResult, alloc: std.mem.Allocator) void {
+            inline for (std.meta.fields(@This())) |field| {
+                if (field.type == ?[]u8) {
+                    if (@field(self, field.name)) |*value| {
+                        alloc.free(value.*);
+                    }
+                }
+            }
+        }
     };
 
     const Vector = struct {
@@ -41,6 +51,10 @@ pub const Parser = struct {
         font: struct {
             family: ?[]u8,
             size: ?i64,
+
+            pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
+                if (self.family) |family| alloc.free(family);
+            }
         },
 
         window: struct {
@@ -51,6 +65,10 @@ pub const Parser = struct {
         cursor: struct {
             shape: ?[]u8,
             blinking: bool,
+
+            pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
+                if (self.shape) |shape| alloc.free(shape);
+            }
         },
 
         colors: struct {
@@ -62,6 +80,14 @@ pub const Parser = struct {
             extra: struct {
                 zoom_indicator: ?[]u8,
             },
+
+            pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
+                if (self.background) |background| alloc.free(background);
+                if (self.foreground) |foreground| alloc.free(foreground);
+                self.normal.deinit(alloc);
+                self.bright.deinit(alloc);
+                if (self.extra.zoom_indicator) |indicator| alloc.free(indicator);
+            }
         },
 
         pub fn init(allocator: mem.Allocator) !*Result {
@@ -106,10 +132,9 @@ pub const Parser = struct {
         }
 
         pub fn deinit(self: *Result) void {
-            if (self.font.family) |family| {
-                self.allocator.free(family);
-            }
-
+            self.font.deinit(self.allocator);
+            self.cursor.deinit(self.allocator);
+            self.colors.deinit(self.allocator);
             self.allocator.destroy(self);
         }
     };
@@ -122,100 +147,40 @@ pub const Parser = struct {
         };
     }
 
-    const ParsingError = error{
-        InvalidSchema,
-        InvalidCursor,
-    };
+    const ParsingError = error{InvalidSchema};
 
-    fn assert(cond: bool) ParsingError!void {
+    inline fn assert(cond: bool) ParsingError!void {
         if (!cond) {
             return error.InvalidSchema;
         }
     }
 
-    fn parseFont(self: *Parser, table: *toml.Table) !void {
-        if (table.keys.get("font")) |font| {
-            try assert(font == .Table);
+    pub fn parse(self: *Parser) !*Result {
+        self.result = try Result.init(self.allocator);
 
-            if (font.Table.keys.get("family")) |family| {
-                try assert(family == .String);
+        const alloc = self.allocator;
 
-                self.result.?.font.family = try self.allocator.dupe(
-                    u8,
-                    family.String,
-                );
+        var parsed = try Config.parseString(self.allocator, self.contents);
+        defer parsed.deinit();
+
+        if (parsed.get("font")) |font| {
+            if (font.get("family")) |family| {
+                try assert(family.value == .string);
+                self.result.?.font.family = try alloc.dupe(u8, family.value.string);
             }
-
-            if (font.Table.keys.get("size")) |size| {
-                try assert(size == .Integer);
-                self.result.?.font.size = size.Integer;
+            if (font.get("size")) |size| {
+                try assert(size.value == .int);
+                self.result.?.font.size = size.value.int;
             }
         }
-    }
 
-    inline fn dupString(
-        self: *Parser,
-        into: *?[]u8,
-        value_ref: *const []const u8,
-    ) !void {
-        const allocator = self.allocator;
-        into.* = try allocator.dupe(u8, value_ref.*);
-    }
-
-    fn parseTermColors(
-        self: *Parser,
-        table: *const toml.Value,
-        colors: *ColorsResult,
-    ) !void {
-        try assert(table.* == .Table);
-
-        if (table.*.Table.keys.get("black")) |black| {
-            try assert(black == .String);
-            try self.dupString(&colors.*.black, &black.String);
-        }
-
-        if (table.*.Table.keys.get("blue")) |blue| {
-            try assert(blue == .String);
-            try self.dupString(&colors.*.blue, &blue.String);
-        }
-
-        if (table.*.Table.keys.get("cyan")) |cyan| {
-            try assert(cyan == .String);
-            try self.dupString(&colors.*.cyan, &cyan.String);
-        }
-
-        if (table.*.Table.keys.get("green")) |green| {
-            try assert(green == .String);
-            try self.dupString(&colors.*.green, &green.String);
-        }
-
-        if (table.*.Table.keys.get("magenta")) |magenta| {
-            try assert(magenta == .String);
-            try self.dupString(&colors.*.magenta, &magenta.String);
-        }
-
-        if (table.*.Table.keys.get("red")) |red| {
-            try assert(red == .String);
-            try self.dupString(&colors.*.red, &red.String);
-        }
-
-        if (table.*.Table.keys.get("white")) |white| {
-            try assert(white == .String);
-            try self.dupString(&colors.*.white, &white.String);
-        }
-
-        if (table.*.Table.keys.get("yellow")) |yellow| {
-            try assert(yellow == .String);
-            try self.dupString(&colors.*.yellow, &yellow.String);
-        }
-    }
-
-    fn parseCursor(self: *Parser, table: *toml.Table) !void {
-        if (table.keys.get("cursor")) |cursor| {
-            try assert(cursor == .Table);
-
-            if (cursor.Table.keys.get("shape")) |shape| {
-                try assert(shape == .String);
+        if (parsed.get("cursor")) |cursor| {
+            if (cursor.get("blinking")) |blinking| {
+                try assert(blinking.value == .boolean);
+                self.result.?.cursor.blinking = blinking.value.boolean;
+            }
+            if (cursor.get("shape")) |shape| {
+                try assert(shape.value == .string);
 
                 const valid_cursors = [_][]const u8{
                     "block",
@@ -223,153 +188,75 @@ pub const Parser = struct {
                     "underline",
                 };
 
-                var ok = false;
-
-                for (valid_cursors) |element| {
-                    if (std.mem.eql(u8, element, shape.String)) {
-                        ok = true;
-                        break;
+                const exists = ok: {
+                    inline for (valid_cursors) |element| {
+                        if (std.mem.eql(u8, element, shape.value.string)) {
+                            break :ok true;
+                        }
                     }
-                }
+                    break :ok false;
+                };
 
-                if (!ok) {
-                    return error.InvalidCursor;
-                }
-
-                self.result.?.cursor.shape = try self.allocator.dupe(
-                    u8,
-                    shape.String,
-                );
-            }
-
-            if (cursor.Table.keys.get("blinking")) |blinking| {
-                self.result.?.cursor.blinking = blinking.Boolean;
+                try assert(exists);
+                self.result.?.cursor.shape = try alloc.dupe(u8, shape.value.string);
             }
         }
-    }
 
-    const VectorParseError = anyerror || error{
-        InvalidTOMLTableError,
-    };
-
-    fn parseOptionalVector(_: Parser, ptr: *?Vector, table_ptr: *const toml.Value) VectorParseError!void {
-        if (!(table_ptr.* == .Table)) {
-            return error.InvalidTOMLTableError;
-        }
-
-        const table = table_ptr.*;
-
-        if (ptr.* == null) {
-            ptr.* = .{
-                .x = null,
-                .y = null,
+        if (parsed.get("window")) |window| {
+            if (window.get("padding")) |padding| {
+                try assert(padding.value == .int);
+                self.result.?.window.padding = padding.value.int;
+            }
+            const dimensions = &self.result.?.window.default_dimensions;
+            if (dimensions.* == null) dimensions.* = .{ .x = null, .y = null };
+            dimensions.*.?.x = w: {
+                if (window.get("width")) |value| {
+                    try assert(value.value == .int);
+                    break :w value.value.int;
+                }
+                break :w null;
+            };
+            dimensions.*.?.y = h: {
+                if (window.get("height")) |value| {
+                    try assert(value.value == .int);
+                    break :h value.value.int;
+                }
+                break :h null;
             };
         }
 
-        if (table.Table.keys.get("x")) |x| {
-            try assert(x == .Integer);
-            ptr.*.?.x = x.Integer;
-        }
-
-        if (table.Table.keys.get("y")) |y| {
-            try assert(y == .Integer);
-            ptr.*.?.y = y.Integer;
-        }
-    }
-
-    fn parseWindow(self: *Parser, table: *toml.Table) !void {
-        if (table.keys.get("window")) |window| {
-            try assert(window == .Table);
-
-            if (window.Table.keys.get("padding")) |padding| {
-                try assert(padding == .Integer);
-                self.result.?.window.padding = padding.Integer;
-            }
-
-            if (window.Table.keys.get("default-dimensions")) |*default_dimensions| {
-                try assert(default_dimensions.* == .Table);
-
-                try self.parseOptionalVector(
-                    &self.result.?.window.default_dimensions,
-                    default_dimensions,
-                );
-            }
-        }
-    }
-
-    fn parseColors(self: *Parser, table: *toml.Table) !void {
-        if (table.keys.get("colors")) |colors| {
-            try assert(colors == .Table);
-
-            if (colors.Table.keys.get("background")) |background| {
-                try assert(background == .String);
-                self.result.?.colors.background = try self.allocator.dupe(
-                    u8,
-                    background.String,
-                );
-            }
-
-            if (colors.Table.keys.get("foreground")) |foreground| {
-                try assert(foreground == .String);
-                self.result.?.colors.foreground = try self.allocator.dupe(
-                    u8,
-                    foreground.String,
-                );
-            }
-
-            if (colors.Table.keys.get("extra")) |extra| {
-                try assert(extra == .Table);
-
-                if (extra.Table.keys.get("zoom-indicator")) |zoom_indicator| {
-                    try assert(zoom_indicator == .String);
-                    self.result.?.colors.extra.zoom_indicator = try self.allocator.dupe(
-                        u8,
-                        zoom_indicator.String,
-                    );
+        if (parsed.get("colors")) |table| {
+            var colors_table = self.result.?.colors;
+            const colors = [_]struct { ptr: *?[]u8, key: []const u8 }{
+                .{ .ptr = &colors_table.background, .key = "background" },
+                .{ .ptr = &colors_table.foreground, .key = "foreground" },
+                .{ .ptr = &colors_table.extra.zoom_indicator, .key = "zoom_indicator" },
+                .{ .ptr = &colors_table.normal.black, .key = "black" },
+                .{ .ptr = &colors_table.normal.blue, .key = "blue" },
+                .{ .ptr = &colors_table.normal.cyan, .key = "cyan" },
+                .{ .ptr = &colors_table.normal.cyan, .key = "cyan" },
+                .{ .ptr = &colors_table.normal.green, .key = "green" },
+                .{ .ptr = &colors_table.normal.magenta, .key = "magenta" },
+                .{ .ptr = &colors_table.normal.red, .key = "red" },
+                .{ .ptr = &colors_table.normal.white, .key = "white" },
+                .{ .ptr = &colors_table.normal.yellow, .key = "yellow" },
+                .{ .ptr = &colors_table.bright.black, .key = "bright_black" },
+                .{ .ptr = &colors_table.bright.blue, .key = "bright_blue" },
+                .{ .ptr = &colors_table.bright.cyan, .key = "bright_cyan" },
+                .{ .ptr = &colors_table.bright.cyan, .key = "bright_cyan" },
+                .{ .ptr = &colors_table.bright.green, .key = "bright_green" },
+                .{ .ptr = &colors_table.bright.magenta, .key = "bright_magenta" },
+                .{ .ptr = &colors_table.bright.red, .key = "bright_red" },
+                .{ .ptr = &colors_table.bright.white, .key = "bright_white" },
+                .{ .ptr = &colors_table.bright.yellow, .key = "bright_yellow" },
+            };
+            inline for (colors) |color| {
+                if (table.get(color.key)) |config_color| {
+                    try assert(config_color.value == .string);
+                    color.ptr.* = try alloc.dupe(u8, config_color.value.string);
                 }
             }
-
-            if (colors.Table.keys.get("normal")) |normal| {
-                try self.parseTermColors(
-                    &normal,
-                    &self.result.?.colors.normal,
-                );
-            }
-
-            if (colors.Table.keys.get("bright")) |bright| {
-                try self.parseTermColors(
-                    &bright,
-                    &self.result.?.colors.bright,
-                );
-            }
         }
-    }
-
-    // implement proper config parsing error handler, something like
-    // a popup might be *Awesome!*.
-    fn handleError(_: Parser, err: anyerror) void {
-        const errcode = @as([]const u8, @errorName(err));
-        const stdout = std.io.getStdOut().writer();
-        stdout.print("Error code '{s}' occurred!\n", .{errcode}) catch unreachable;
-    }
-
-    pub fn parse(self: *Parser) !*Result {
-        self.result = try Result.init(self.allocator);
-
-        var parser = try toml.parseContents(
-            self.allocator,
-            self.contents,
-        );
-
-        defer parser.deinit();
-
-        var table = try parser.parse();
-        defer table.deinit();
-
-        self.parseFont(table) catch |err| self.handleError(err);
-        self.parseCursor(table) catch |err| self.handleError(err);
-        self.parseWindow(table) catch |err| self.handleError(err);
-        self.parseColors(table) catch |err| self.handleError(err);
 
         return self.result orelse @panic("result was not initialised");
     }
@@ -397,7 +284,7 @@ fn createConfigFiles(self: Self, dirname_path: []u8) ![]u8 {
 
     // tryna stat if possible, if the file doesn't exists we're gonna try to create it.
     const stat: ?std.fs.Dir.Stat = value: {
-        break :value config_folder.statFile("config.toml") catch |err| {
+        break :value config_folder.statFile("config.cnf") catch |err| {
             if (err != error.FileNotFound) {
                 return err;
             }
@@ -408,7 +295,7 @@ fn createConfigFiles(self: Self, dirname_path: []u8) ![]u8 {
 
     // if the file exists we'll just read it and return it immediately, without creating it.
     if (stat) |file_stat| {
-        var config_file = try config_folder.openFile("config.toml", .{});
+        var config_file = try config_folder.openFile("config.cnf", .{});
         defer config_file.close();
 
         return try config_file.readToEndAlloc(
@@ -417,7 +304,7 @@ fn createConfigFiles(self: Self, dirname_path: []u8) ![]u8 {
         );
     }
 
-    const config_file = try config_folder.createFile("./config.toml", .{
+    const config_file = try config_folder.createFile("./config.cnf", .{
         .read = true,
         .truncate = false,
         .exclusive = false,
@@ -432,8 +319,8 @@ fn createConfigFiles(self: Self, dirname_path: []u8) ![]u8 {
 
     if (eql(u8, contents, "")) {
         const stderr = std.io.getStdErr().writer();
-        try stderr.print("[INFO] Writing default config into ~/.config/harakara/config.toml!\n", .{});
-        const new_content = @embedFile("../resources/config.toml");
+        try stderr.print("[INFO] Writing default config into ~/.config/harakara/config.cnf!\n", .{});
+        const new_content = @embedFile("../resources/config.cnf");
         try config_file.writeAll(new_content);
         return try self.allocator.dupe(u8, new_content);
     }
