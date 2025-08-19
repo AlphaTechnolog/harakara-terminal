@@ -1,56 +1,72 @@
 const std = @import("std");
 
-fn pkgConfig(b: *std.Build, exe: *std.Build.Step.Compile) !void {
-    const allocator = b.allocator;
-    const argv = [_][]const u8{ "pkg-config", "--cflags", "--libs", "gtk+-3.0", "vte-2.91" };
+const LinkPayload = struct {
+    b: *std.Build,
+    exe: *std.Build.Step.Compile,
+    allocator: ?std.mem.Allocator = null,
+};
 
-    const result = try std.process.Child.run(.{
-        .allocator = allocator,
-        .argv = &argv,
-    });
+fn pkgConfigLink(comptime libs: anytype) fn (opts: LinkPayload) anyerror!void {
+    const T = @TypeOf(libs);
+    return struct {
+        fn exer(opts: LinkPayload) anyerror!void {
+            const libraries = @as(T, libs);
+            const b = opts.b;
+            const exe = opts.exe;
+            const allocator = opts.allocator orelse b.allocator;
 
-    defer {
-        allocator.free(result.stdout);
-        allocator.free(result.stderr);
-    }
+            const argv = [_][]const u8{ "pkg-config", "--cflags", "--libs" } ++ libraries;
 
-    var it = std.mem.tokenize(u8, result.stdout, " ");
+            const result = try std.process.Child.run(.{
+                .allocator = allocator,
+                .argv = &argv,
+            });
 
-    while (it.next()) |parameter| {
-        const trimmed_parameter = std.mem.trim(u8, parameter, "\n");
+            defer {
+                allocator.free(result.stdout);
+                allocator.free(result.stderr);
+            }
 
-        // prevents the current flag of being a single \n and have no content.
-        if (std.mem.eql(u8, trimmed_parameter, "")) {
-            continue;
+            var it = std.mem.tokenizeAny(u8, result.stdout, " ");
+            while (it.next()) |parameter| {
+                const trimmed = std.mem.trim(u8, parameter, "\n");
+                if (trimmed.len == 0) continue;
+
+                var value = parameter[2..];
+                if (std.mem.endsWith(u8, value, "\n")) {
+                    value = value[0 .. value.len - 1];
+                }
+
+                if (std.mem.startsWith(u8, parameter, "-I")) {
+                    exe.addIncludePath(.{ .cwd_relative = value });
+                } else if (std.mem.startsWith(u8, parameter, "-l")) {
+                    exe.linkSystemLibrary(value);
+                }
+            }
         }
-
-        var value = parameter[2..];
-
-        if (std.mem.endsWith(u8, value, "\n")) {
-            value = value[0 .. value.len - 1];
-        }
-
-        if (std.mem.startsWith(u8, parameter, "-I")) {
-            exe.addIncludePath(.{ .cwd_relative = value });
-        } else if (std.mem.startsWith(u8, parameter, "-l")) {
-            exe.linkSystemLibrary(value);
-        }
-    }
+    }.exer;
 }
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable(.{
-        .name = "Harakara",
+    const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    exe.linkLibC();
-    pkgConfig(b, exe) catch unreachable;
+    const exe = b.addExecutable(.{
+        .name = "harakara_terminal",
+        .root_module = exe_mod,
+        .link_libc = true,
+    });
+
+    pkgConfigLink([_][]const u8{ "gtk+-3.0", "vte-2.91" })(.{
+        .b = b,
+        .exe = exe,
+    }) catch unreachable;
 
     b.installArtifact(exe);
 
@@ -65,13 +81,11 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
 
     const exe_unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = exe_mod,
     });
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
-
     const test_step = b.step("test", "Run unit tests");
+
     test_step.dependOn(&run_exe_unit_tests.step);
 }
